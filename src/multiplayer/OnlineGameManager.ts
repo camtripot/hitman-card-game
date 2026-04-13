@@ -45,7 +45,12 @@ type OnlineListener = (state: OnlineGameState) => void;
 type RoomListener = (room: RoomInfo) => void;
 type ErrorListener = (error: string) => void;
 
-const SERVER_URL = 'http://localhost:3001';
+// Auto-detect: use production URL if not on localhost, otherwise use local dev server
+const SERVER_URL = typeof window !== 'undefined' &&
+  window.location.hostname !== 'localhost' &&
+  window.location.hostname !== '127.0.0.1'
+    ? 'https://hitman-server.onrender.com'
+    : 'http://localhost:3001';
 
 export class OnlineGameManager {
   private socket: Socket | null = null;
