@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { Card } from '../models/Card';
 import { CardComponent } from './CardComponent';
 
@@ -15,18 +15,28 @@ export function CardPreview({ visible, cards, onDismiss, title }: CardPreviewPro
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <Text style={styles.title}>{title || 'Voyante - Top 3 de la pioche'}</Text>
+          <Text style={styles.title}>
+            🔮 {title || 'Voyante - Top 3 de la pioche'}
+          </Text>
           <View style={styles.cards}>
             {cards.map((card, index) => (
               <View key={card.id} style={styles.cardWrapper}>
-                <Text style={styles.position}>#{index + 1}</Text>
+                <View style={styles.positionBadge}>
+                  <Text style={styles.positionText}>{index + 1}</Text>
+                </View>
                 <CardComponent card={card} small />
               </View>
             ))}
           </View>
-          <TouchableOpacity style={styles.okButton} onPress={onDismiss}>
-            <Text style={styles.okText}>OK</Text>
-          </TouchableOpacity>
+          <Pressable
+            style={({ pressed }) => [
+              styles.okButton,
+              pressed && styles.okButtonPressed,
+            ]}
+            onPress={onDismiss}
+          >
+            <Text style={styles.okText}>Compris !</Text>
+          </Pressable>
         </View>
       </View>
     </Modal>
@@ -36,44 +46,64 @@ export function CardPreview({ visible, cards, onDismiss, title }: CardPreviewPro
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modal: {
-    backgroundColor: '#2c3e50',
-    borderRadius: 16,
+    backgroundColor: '#1e2a3a',
+    borderRadius: 18,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(155, 89, 182, 0.3)',
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#9b59b6',
-    marginBottom: 16,
+    color: '#bb86fc',
+    marginBottom: 18,
+    letterSpacing: 0.3,
   },
   cards: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+    gap: 14,
+    marginBottom: 22,
   },
   cardWrapper: {
     alignItems: 'center',
   },
-  position: {
-    color: '#bdc3c7',
-    fontSize: 11,
-    marginBottom: 4,
+  positionBadge: {
+    backgroundColor: '#9b59b6',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  positionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   okButton: {
     backgroundColor: '#9b59b6',
-    paddingVertical: 12,
-    paddingHorizontal: 50,
-    borderRadius: 8,
+    paddingVertical: 13,
+    paddingHorizontal: 55,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#bb86fc',
+    cursor: 'pointer' as any,
+  },
+  okButtonPressed: {
+    backgroundColor: '#7d3c98',
+    transform: [{ scale: 0.97 }],
   },
   okText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    letterSpacing: 0.3,
   },
 });

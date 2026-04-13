@@ -9,27 +9,32 @@ interface TurnBannerProps {
   mustPlayCount: number;
 }
 
-const PHASE_LABELS: Partial<Record<GamePhase, string>> = {
-  [GamePhase.WAITING_FOR_TURN_ACTION]: 'Joue ou pioche',
-  [GamePhase.REACTION_WINDOW]: 'Fenetre de reaction !',
-  [GamePhase.AWAITING_TARGET]: 'Choisis une cible',
-  [GamePhase.AWAITING_CARD_CHOICE]: 'Choisis une carte a donner',
-  [GamePhase.VIEWING_VOYANTE]: 'Regarde la pioche...',
-  [GamePhase.GAME_OVER]: 'Partie terminee !',
-  [GamePhase.PLAYER_ELIMINATED]: 'Joueur elimine !',
+const PHASE_CONFIG: Partial<Record<GamePhase, { label: string; emoji: string }>> = {
+  [GamePhase.WAITING_FOR_TURN_ACTION]: { label: 'Joue ou pioche', emoji: '🃏' },
+  [GamePhase.REACTION_WINDOW]: { label: 'Reaction !', emoji: '⚡' },
+  [GamePhase.AWAITING_TARGET]: { label: 'Choisis une cible', emoji: '🎯' },
+  [GamePhase.AWAITING_CARD_CHOICE]: { label: 'Choisis une carte', emoji: '🤝' },
+  [GamePhase.VIEWING_VOYANTE]: { label: 'Voyante...', emoji: '🔮' },
+  [GamePhase.GAME_OVER]: { label: 'Partie terminee !', emoji: '🏁' },
+  [GamePhase.PLAYER_ELIMINATED]: { label: 'Joueur elimine !', emoji: '💀' },
 };
 
 export function TurnBanner({ playerName, phase, isMyTurn, mustPlayCount }: TurnBannerProps) {
-  const phaseLabel = PHASE_LABELS[phase] || '';
+  const config = PHASE_CONFIG[phase];
+  const phaseLabel = config ? `${config.emoji} ${config.label}` : '';
+  const turnEmoji = isMyTurn ? '⚔️' : '⏳';
 
   return (
-    <View style={[styles.banner, isMyTurn && styles.myTurnBanner]}>
-      <Text style={styles.turnText}>
-        {isMyTurn ? 'Ton tour !' : `Tour de ${playerName}`}
-      </Text>
-      <Text style={styles.phaseText}>{phaseLabel}</Text>
+    <View style={[styles.banner, isMyTurn ? styles.myTurnBanner : styles.waitingBanner]}>
+      <View style={styles.row}>
+        <Text style={styles.turnEmoji}>{turnEmoji}</Text>
+        <Text style={styles.turnText}>
+          {isMyTurn ? 'Ton tour !' : `Tour de ${playerName}`}
+        </Text>
+      </View>
+      {phaseLabel ? <Text style={styles.phaseText}>{phaseLabel}</Text> : null}
       {mustPlayCount > 1 && (
-        <Text style={styles.bombText}>Bombe ! {mustPlayCount} actions restantes</Text>
+        <Text style={styles.bombText}>💣 Bombe ! {mustPlayCount} actions restantes</Text>
       )}
     </View>
   );
@@ -37,28 +42,41 @@ export function TurnBanner({ playerName, phase, isMyTurn, mustPlayCount }: TurnB
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: '#2c3e50',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   myTurnBanner: {
-    backgroundColor: '#27ae60',
+    backgroundColor: '#1a6b3c',
+  },
+  waitingBanner: {
+    backgroundColor: '#2a2a4a',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  turnEmoji: {
+    fontSize: 18,
   },
   turnText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#fff',
+    letterSpacing: 0.3,
   },
   phaseText: {
-    fontSize: 13,
-    color: '#ecf0f1',
+    fontSize: 12,
+    color: '#ccd6dd',
     marginTop: 2,
   },
   bombText: {
     fontSize: 12,
     color: '#f39c12',
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: 3,
   },
 });

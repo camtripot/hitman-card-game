@@ -185,16 +185,18 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
         direction={gameState.direction}
       />
 
-      <ChainIndicator chainedCards={gameState.chainedCards} />
+      <View style={styles.gameBody}>
+        <ChainIndicator chainedCards={gameState.chainedCards} />
 
-      <EventLog event={gameState.lastEvent} />
+        <EventLog event={gameState.lastEvent} />
 
-      <View style={styles.centerArea}>
-        <DrawPile
-          cardsRemaining={gameState.drawPileCount}
-          onDraw={handleDraw}
-          canDraw={canDraw}
-        />
+        <View style={styles.centerArea}>
+          <DrawPile
+            cardsRemaining={gameState.drawPileCount}
+            onDraw={handleDraw}
+            canDraw={canDraw}
+          />
+        </View>
       </View>
 
       <View style={styles.handArea}>
@@ -244,6 +246,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+    height: '100%' as any,
+    maxHeight: '100vh' as any,
+    overflow: 'hidden' as any,
   },
   roomCodeBar: {
     backgroundColor: '#2c3e50',
@@ -256,10 +261,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  gameBody: {
+    flex: 1,
+    minHeight: 0,
+  },
   centerArea: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 0,
   },
   handArea: {
     borderTopWidth: 1,

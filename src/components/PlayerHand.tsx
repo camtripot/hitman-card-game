@@ -21,6 +21,7 @@ export function PlayerHand({ cards, playableCardIds, onPlayCard, hidden }: Playe
 
   return (
     <View style={styles.container}>
+      <Text style={styles.label}>Ta main</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {cards.map(card => (
           <CardComponent
@@ -40,14 +41,25 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 150,
   },
+  label: {
+    color: '#7f8fa6',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginLeft: 14,
+    marginBottom: 6,
+  },
   scroll: {
     paddingHorizontal: 10,
     alignItems: 'center',
+    gap: 8,
   },
   hiddenText: {
-    color: '#95a5a6',
+    color: '#7f8fa6',
     textAlign: 'center',
     fontSize: 16,
     paddingTop: 50,
+    fontStyle: 'italic',
   },
 });

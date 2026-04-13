@@ -47,6 +47,24 @@ export const CARD_CATEGORIES: Record<CardType, CardCategory> = {
   [CardType.ANGE]: CardCategory.SAVING,
 };
 
+export const CARD_EMOJIS: Record<CardType, string> = {
+  [CardType.VOYANTE]: '\u{1F52E}',
+  [CardType.FUITE]: '\u{1F3C3}',
+  [CardType.CHANGEMENT_DE_SENS]: '\u{1F504}',
+  [CardType.BOMBE]: '\u{1F4A3}',
+  [CardType.VOLEUR]: '\u{1F9B9}',
+  [CardType.DE_VRAI]: '\u{1F3B2}',
+  [CardType.DE_FAUX]: '\u{1F3AD}',
+  [CardType.DERNIERE_PIOCHE]: '\u{1F4E5}',
+  [CardType.MIROIR]: '\u{1FA9E}',
+  [CardType.RENVOIE]: '\u21A9\uFE0F',
+  [CardType.METEORITE]: '\u2604\uFE0F',
+  [CardType.CHAINE]: '\u26D3\uFE0F',
+  [CardType.STOP]: '\u{1F6D1}',
+  [CardType.HITMAN]: '\u{1F52B}',
+  [CardType.ANGE]: '\u{1F47C}',
+};
+
 export const CARD_NAMES: Record<CardType, string> = {
   [CardType.VOYANTE]: 'Voyante',
   [CardType.FUITE]: 'Fuite',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Card } from '../models/Card';
 import { CardComponent } from './CardComponent';
 import { isInstant } from '../engine/CardEffects';
@@ -27,8 +27,9 @@ export function ReactionOverlay({
 
   return (
     <View style={styles.overlay}>
+      <View style={styles.urgencyBar} />
       <View style={styles.container}>
-        <Text style={styles.title}>Fenetre de reaction !</Text>
+        <Text style={styles.title}>⚡ Reaction !</Text>
         <Text style={styles.subtitle}>Joue une carte instantanee ou passe</Text>
 
         {instantCards.length > 0 && (
@@ -45,9 +46,15 @@ export function ReactionOverlay({
           </ScrollView>
         )}
 
-        <TouchableOpacity style={styles.passButton} onPress={onPass}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.passButton,
+            pressed && styles.passButtonPressed,
+          ]}
+          onPress={onPass}
+        >
           <Text style={styles.passText}>Passer</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -59,36 +66,51 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(40, 15, 0, 0.95)',
     paddingBottom: 30,
+    borderTopWidth: 2,
+    borderTopColor: '#e67e22',
+  },
+  urgencyBar: {
+    height: 3,
+    backgroundColor: '#e74c3c',
   },
   container: {
     padding: 16,
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#e67e22',
+    color: '#f39c12',
     marginBottom: 4,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 13,
     color: '#bdc3c7',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   cardList: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   passButton: {
-    backgroundColor: '#7f8c8d',
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    borderRadius: 8,
+    backgroundColor: '#c0392b',
+    paddingVertical: 14,
+    paddingHorizontal: 50,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+    cursor: 'pointer' as any,
+  },
+  passButtonPressed: {
+    backgroundColor: '#962d22',
+    transform: [{ scale: 0.97 }],
   },
   passText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
 });

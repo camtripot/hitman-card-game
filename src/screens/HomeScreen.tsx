@@ -84,6 +84,13 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       </Pressable>
 
       <Pressable
+        style={[styles.startButton, styles.rulesButton]}
+        onPress={() => navigation.navigate('Rules')}
+      >
+        <Text style={styles.startText}>{'\u{1F4D6}'} Regles du jeu</Text>
+      </Pressable>
+
+      <Pressable
         style={[styles.startButton, styles.onlineButton]}
         onPress={() => navigation.navigate('Lobby')}
       >
@@ -163,6 +170,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     cursor: 'pointer' as any,
+  },
+  rulesButton: {
+    backgroundColor: '#8e44ad',
   },
   onlineButton: {
     backgroundColor: '#2980b9',

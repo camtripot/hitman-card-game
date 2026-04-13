@@ -151,16 +151,18 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         direction={gameState.direction}
       />
 
-      <ChainIndicator chainedCards={gameState.chainedCards} />
+      <View style={styles.gameBody}>
+        <ChainIndicator chainedCards={gameState.chainedCards} />
 
-      <EventLog event={gameState.lastEvent} />
+        <EventLog event={gameState.lastEvent} />
 
-      <View style={styles.centerArea}>
-        <DrawPile
-          cardsRemaining={gameState.drawPile.length}
-          onDraw={handleDraw}
-          canDraw={canDraw}
-        />
+        <View style={styles.centerArea}>
+          <DrawPile
+            cardsRemaining={gameState.drawPile.length}
+            onDraw={handleDraw}
+            canDraw={canDraw}
+          />
+        </View>
       </View>
 
       {myPlayer && (
@@ -212,11 +214,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+    height: '100%' as any,
+    maxHeight: '100vh' as any,
+    overflow: 'hidden' as any,
+  },
+  gameBody: {
+    flex: 1,
+    minHeight: 0,
   },
   centerArea: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    minHeight: 0,
   },
   handArea: {
     borderTopWidth: 1,

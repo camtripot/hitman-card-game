@@ -14,9 +14,11 @@ export function ChainIndicator({ chainedCards }: ChainIndicatorProps) {
     <View style={styles.container}>
       {chainedCards.map((entry, index) => (
         <View key={index} style={styles.badge}>
-          <Text style={styles.text}>
-            {CARD_NAMES[entry.cardType]} enchainee ({entry.turnsRemaining} tours)
-          </Text>
+          <Text style={styles.icon}>⛓️</Text>
+          <View style={styles.textContainer}>
+            <Text style={styles.cardName}>{CARD_NAMES[entry.cardType]}</Text>
+            <Text style={styles.turns}>{entry.turnsRemaining} tour{entry.turnsRemaining > 1 ? 's' : ''}</Text>
+          </View>
         </View>
       ))}
     </View>
@@ -28,18 +30,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
   badge: {
-    backgroundColor: '#8e44ad',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: '#4a1a6b',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#7b2faf',
   },
-  text: {
-    color: '#fff',
+  icon: {
+    fontSize: 14,
+  },
+  textContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  cardName: {
+    color: '#e0c3fc',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  turns: {
+    color: '#a78bdb',
     fontSize: 11,
-    fontWeight: '600',
   },
 });

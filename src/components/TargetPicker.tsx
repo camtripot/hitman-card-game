@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
 import { Player } from '../models/Player';
 
 interface TargetPickerProps {
@@ -10,6 +10,17 @@ interface TargetPickerProps {
   title?: string;
 }
 
+const TARGET_COLORS = [
+  '#3498db',
+  '#e74c3c',
+  '#2ecc71',
+  '#f39c12',
+  '#9b59b6',
+  '#1abc9c',
+  '#e67e22',
+  '#2c3e50',
+];
+
 export function TargetPicker({ visible, players, myPlayerId, onChoose, title }: TargetPickerProps) {
   const eligibleTargets = players.filter(p => !p.isEliminated && p.id !== myPlayerId);
 
@@ -17,17 +28,32 @@ export function TargetPicker({ visible, players, myPlayerId, onChoose, title }: 
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <Text style={styles.title}>{title || 'Choisis un joueur'}</Text>
-          {eligibleTargets.map(player => (
-            <TouchableOpacity
-              key={player.id}
-              style={styles.playerButton}
-              onPress={() => onChoose(player.id)}
-            >
-              <Text style={styles.playerName}>{player.name}</Text>
-              <Text style={styles.cardCount}>{player.hand.length} cartes</Text>
-            </TouchableOpacity>
-          ))}
+          <Text style={styles.title}>🎯 {title || 'Choisis un joueur'}</Text>
+          <View style={styles.targetList}>
+            {eligibleTargets.map((player, index) => {
+              const firstLetter = player.name.charAt(0).toUpperCase();
+              const color = TARGET_COLORS[index % TARGET_COLORS.length];
+              return (
+                <Pressable
+                  key={player.id}
+                  style={({ pressed }) => [
+                    styles.playerButton,
+                    pressed && styles.playerButtonPressed,
+                  ]}
+                  onPress={() => onChoose(player.id)}
+                >
+                  <View style={[styles.avatar, { backgroundColor: color }]}>
+                    <Text style={styles.avatarLetter}>{firstLetter}</Text>
+                  </View>
+                  <View style={styles.playerInfo}>
+                    <Text style={styles.playerName}>{player.name}</Text>
+                    <Text style={styles.cardCount}>{player.hand.length} cartes</Text>
+                  </View>
+                  <Text style={styles.arrow}>›</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </View>
     </Modal>
@@ -37,16 +63,18 @@ export function TargetPicker({ visible, players, myPlayerId, onChoose, title }: 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modal: {
-    backgroundColor: '#2c3e50',
-    borderRadius: 16,
+    backgroundColor: '#1e2a3a',
+    borderRadius: 18,
     padding: 24,
-    width: '80%',
-    maxWidth: 350,
+    width: '82%',
+    maxWidth: 360,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   title: {
     fontSize: 20,
@@ -54,16 +82,41 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     marginBottom: 20,
+    letterSpacing: 0.3,
+  },
+  targetList: {
+    gap: 10,
   },
   playerButton: {
-    backgroundColor: '#34495e',
+    backgroundColor: '#2a3a4e',
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    cursor: 'pointer' as any,
+  },
+  playerButtonPressed: {
+    backgroundColor: '#3a4f6a',
+    transform: [{ scale: 0.98 }],
+  },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarLetter: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  playerInfo: {
+    flex: 1,
   },
   playerName: {
     fontSize: 16,
@@ -71,7 +124,13 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   cardCount: {
-    fontSize: 13,
-    color: '#95a5a6',
+    fontSize: 12,
+    color: '#7f8fa6',
+    marginTop: 1,
+  },
+  arrow: {
+    fontSize: 24,
+    color: '#7f8fa6',
+    fontWeight: '300',
   },
 });
