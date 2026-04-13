@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, StatusBar } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, StatusBar } from 'react-native';
 import { GamePhase } from '../models/GameState';
-import { CardCategory } from '../models/Card';
 import { useGame } from '../context/GameContext';
 import { TurnBanner } from '../components/TurnBanner';
 import { PlayerRing } from '../components/PlayerRing';
@@ -26,11 +25,16 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   const [showHandReveal, setShowHandReveal] = useState(false);
   const [lastPlayerIndex, setLastPlayerIndex] = useState(-1);
 
+  // --- ALL HOOKS MUST BE BEFORE ANY RETURN ---
+
   useEffect(() => {
-    startLocalGame(playerNames);
+    try {
+      startLocalGame(playerNames);
+    } catch (e) {
+      console.error('Failed to start game:', e);
+    }
   }, []);
 
-  // In local mode, show hand reveal screen when turn changes
   useEffect(() => {
     if (!gameState || mode !== 'local') return;
     if (gameState.phase === GamePhase.GAME_OVER) return;
@@ -42,55 +46,6 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
     }
     setLastPlayerIndex(gameState.currentPlayerIndex);
   }, [gameState?.currentPlayerIndex, gameState?.phase]);
-
-  if (!gameState) return null;
-
-  // Game over screen
-  if (gameState.phase === GamePhase.GAME_OVER && gameState.winner) {
-    const winner = gameState.players.find(p => p.id === gameState.winner);
-    return (
-      <ResultsScreen
-        winnerName={winner?.name || 'Inconnu'}
-        onPlayAgain={() => startLocalGame(playerNames)}
-        onGoHome={() => navigation.navigate('Home')}
-      />
-    );
-  }
-
-  // Hand reveal (pass the phone)
-  if (showHandReveal) {
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    return (
-      <HandRevealScreen
-        playerName={currentPlayer.name}
-        onReady={() => setShowHandReveal(false)}
-      />
-    );
-  }
-
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const myPlayer = gameState.players.find(p => p.id === myPlayerId);
-  const isMyTurn = currentPlayer?.id === myPlayerId;
-
-  // Determine which cards are playable
-  const playableCardIds = validActions
-    .filter(a => a.type === 'PLAY_CARD')
-    .map(a => (a as any).cardInstanceId);
-
-  const reactableCardIds = validActions
-    .filter(a => a.type === 'REACT_WITH_CARD')
-    .map(a => (a as any).cardInstanceId);
-
-  const canDraw = validActions.some(a => a.type === 'DRAW_CARD');
-  const showTargetPicker = gameState.phase === GamePhase.AWAITING_TARGET &&
-    validActions.some(a => a.type === 'CHOOSE_TARGET');
-  const showCardChoice = gameState.phase === GamePhase.AWAITING_CARD_CHOICE &&
-    validActions.some(a => a.type === 'CHOOSE_CARD_TO_GIVE');
-  const showReaction = gameState.phase === GamePhase.REACTION_WINDOW &&
-    (validActions.some(a => a.type === 'REACT_WITH_CARD') ||
-     validActions.some(a => a.type === 'PASS_REACTION'));
-  const showVoyante = gameState.phase === GamePhase.VIEWING_VOYANTE &&
-    gameState.voyanteCards.length > 0;
 
   const handlePlayCard = useCallback((cardId: string) => {
     dispatch({ type: 'PLAY_CARD', playerId: myPlayerId, cardInstanceId: cardId });
@@ -119,6 +74,65 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   const handleChooseCardToGive = useCallback((cardId: string) => {
     dispatch({ type: 'CHOOSE_CARD_TO_GIVE', playerId: myPlayerId, cardInstanceId: cardId });
   }, [dispatch, myPlayerId]);
+
+  const playableCardIds = useMemo(() =>
+    validActions.filter(a => a.type === 'PLAY_CARD').map(a => (a as any).cardInstanceId),
+    [validActions]
+  );
+
+  const reactableCardIds = useMemo(() =>
+    validActions.filter(a => a.type === 'REACT_WITH_CARD').map(a => (a as any).cardInstanceId),
+    [validActions]
+  );
+
+  const canDraw = validActions.some(a => a.type === 'DRAW_CARD');
+
+  // --- CONDITIONAL RENDERS AFTER ALL HOOKS ---
+
+  if (!gameState) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ color: '#fff', textAlign: 'center', marginTop: 100, fontSize: 18 }}>
+          Chargement de la partie...
+        </Text>
+      </View>
+    );
+  }
+
+  if (gameState.phase === GamePhase.GAME_OVER && gameState.winner) {
+    const winner = gameState.players.find(p => p.id === gameState.winner);
+    return (
+      <ResultsScreen
+        winnerName={winner?.name || 'Inconnu'}
+        onPlayAgain={() => startLocalGame(playerNames)}
+        onGoHome={() => navigation.navigate('Home')}
+      />
+    );
+  }
+
+  if (showHandReveal) {
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    return (
+      <HandRevealScreen
+        playerName={currentPlayer.name}
+        onReady={() => setShowHandReveal(false)}
+      />
+    );
+  }
+
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  const myPlayer = gameState.players.find(p => p.id === myPlayerId);
+  const isMyTurn = currentPlayer?.id === myPlayerId;
+
+  const showTargetPicker = gameState.phase === GamePhase.AWAITING_TARGET &&
+    validActions.some(a => a.type === 'CHOOSE_TARGET');
+  const showCardChoice = gameState.phase === GamePhase.AWAITING_CARD_CHOICE &&
+    validActions.some(a => a.type === 'CHOOSE_CARD_TO_GIVE');
+  const showReaction = gameState.phase === GamePhase.REACTION_WINDOW &&
+    (validActions.some(a => a.type === 'REACT_WITH_CARD') ||
+     validActions.some(a => a.type === 'PASS_REACTION'));
+  const showVoyante = gameState.phase === GamePhase.VIEWING_VOYANTE &&
+    gameState.voyanteCards.length > 0;
 
   return (
     <View style={styles.container}>

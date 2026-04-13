@@ -3,10 +3,10 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ScrollView,
-  Alert,
+  Platform,
 } from 'react-native';
 import { MIN_PLAYERS, MAX_PLAYERS } from '../engine/rules';
 
@@ -38,7 +38,9 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   const startGame = () => {
     const names = playerNames.map((n, i) => n.trim() || `Joueur ${i + 1}`);
     if (names.length < MIN_PLAYERS) {
-      Alert.alert('Erreur', `Il faut au moins ${MIN_PLAYERS} joueurs`);
+      if (Platform.OS === 'web') {
+        window.alert(`Il faut au moins ${MIN_PLAYERS} joueurs`);
+      }
       return;
     }
     navigation.navigate('Game', { playerNames: names, mode: 'local' });
@@ -60,33 +62,33 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
               onChangeText={(text) => updateName(index, text)}
             />
             {playerNames.length > MIN_PLAYERS && (
-              <TouchableOpacity
+              <Pressable
                 style={styles.removeButton}
                 onPress={() => removePlayer(index)}
               >
                 <Text style={styles.removeText}>X</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         ))}
       </ScrollView>
 
       {playerNames.length < MAX_PLAYERS && (
-        <TouchableOpacity style={styles.addButton} onPress={addPlayer}>
+        <Pressable style={styles.addButton} onPress={addPlayer}>
           <Text style={styles.addText}>+ Ajouter un joueur</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
-      <TouchableOpacity style={styles.startButton} onPress={startGame}>
+      <Pressable style={styles.startButton} onPress={startGame}>
         <Text style={styles.startText}>Jouer en local</Text>
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity
+      <Pressable
         style={[styles.startButton, styles.onlineButton]}
-        onPress={() => Alert.alert('Bientot', 'Le mode en ligne arrive bientot !')}
+        onPress={() => navigation.navigate('Lobby')}
       >
         <Text style={styles.startText}>Jouer en ligne</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
@@ -136,6 +138,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    cursor: 'pointer' as any,
   },
   removeText: {
     color: '#fff',
@@ -146,6 +149,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginBottom: 20,
+    cursor: 'pointer' as any,
   },
   addText: {
     color: '#3498db',
@@ -158,6 +162,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
+    cursor: 'pointer' as any,
   },
   onlineButton: {
     backgroundColor: '#2980b9',

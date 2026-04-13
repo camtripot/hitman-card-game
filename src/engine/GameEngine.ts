@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { Card, CardType, CardCategory, CARD_CATEGORIES } from '../models/Card';
 import { Player } from '../models/Player';
 import {
@@ -13,6 +12,10 @@ import { createDeck, dealCards, shuffle } from './DeckFactory';
 import { getEffectHandler, needsTarget, isInstant } from './CardEffects';
 import { DEFAULT_CARDS_PER_PLAYER } from './rules';
 
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+}
+
 export class GameEngine {
   static createGame(config: Partial<GameConfig> = {}): GameState {
     const fullConfig = { ...DEFAULT_CONFIG, ...config };
@@ -22,19 +25,32 @@ export class GameEngine {
     const players: Player[] = [];
 
     for (const name of playerNames) {
-      const { dealt, remaining } = dealCards(deck, cardsPerPlayer);
+      // Deal cards but exclude Hitman from starting hands
+      let hand: Card[] = [];
+      let remaining = deck;
+      while (hand.length < cardsPerPlayer && remaining.length > 0) {
+        const card = remaining[0];
+        remaining = remaining.slice(1);
+        if (card.type === CardType.HITMAN) {
+          // Put Hitman back at a random position in the deck
+          const pos = Math.floor(Math.random() * (remaining.length + 1));
+          remaining = [...remaining.slice(0, pos), card, ...remaining.slice(pos)];
+        } else {
+          hand.push(card);
+        }
+      }
       deck = remaining;
       players.push({
-        id: uuidv4(),
+        id: generateId(),
         name,
-        hand: dealt,
+        hand,
         isEliminated: false,
         isConnected: true,
       });
     }
 
     return {
-      id: uuidv4(),
+      id: generateId(),
       players,
       drawPile: deck,
       discardPile: [],

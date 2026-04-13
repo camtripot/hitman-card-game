@@ -1,4 +1,4 @@
-import { GameState } from '../models/GameState';
+import { GameState, GamePhase } from '../models/GameState';
 import { PlayerAction } from '../models/Actions';
 import { GameEngine } from '../engine/GameEngine';
 import { GameManager } from './GameManagerInterface';
@@ -14,6 +14,11 @@ export class LocalGameManager implements GameManager {
 
   dispatch(action: PlayerAction): void {
     this.state = GameEngine.dispatch(this.state, action);
+
+    // In local mode, auto-resolve reaction windows
+    // since players can't secretly react on a shared device
+    this.autoResolveReactions();
+
     this.notifyListeners();
   }
 
@@ -38,6 +43,25 @@ export class LocalGameManager implements GameManager {
 
   destroy(): void {
     this.listeners.clear();
+  }
+
+  private autoResolveReactions(): void {
+    // Keep auto-passing until we exit the reaction window
+    let safety = 0;
+    while (this.state.phase === GamePhase.REACTION_WINDOW && this.state.reactionWindow && safety < 50) {
+      safety++;
+      const eligible = this.state.reactionWindow.eligiblePlayerIds;
+      const passed = this.state.reactionWindow.passedPlayerIds;
+
+      // Find the next player who hasn't passed yet
+      const nextToPass = eligible.find(id => !passed.includes(id));
+      if (!nextToPass) break;
+
+      this.state = GameEngine.dispatch(this.state, {
+        type: 'PASS_REACTION',
+        playerId: nextToPass,
+      });
+    }
   }
 
   private notifyListeners(): void {
