@@ -72,7 +72,7 @@ registerEffect(CardType.BOMBE, (state, effect) => {
   const newState: GameState = {
     ...state,
     currentPlayerIndex: targetIndex,
-    mustPlayCount: 2,
+    mustPlayCount: state.mustPlayCount + 2,
     lastEvent: {
       type: 'bombe',
       playerId: effect.sourcePlayerId,
@@ -200,8 +200,9 @@ registerEffect(CardType.DERNIERE_PIOCHE, (state, effect) => {
 // --- Instant card effects ---
 
 registerEffect(CardType.STOP, (state, _effect) => {
-  // Remove the top effect from the stack without resolving it
-  const newStack = state.effectStack.slice(0, -1);
+  // effectStack = [..., cancelledEffect, stopEffect]
+  // Remove both Stop itself AND the cancelled effect below it
+  const newStack = state.effectStack.slice(0, -2);
   const newState: GameState = {
     ...state,
     effectStack: newStack,

@@ -56,8 +56,6 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
 
   const bgColor = CATEGORY_COLORS[card.category];
   const emoji = CARD_EMOJIS[displayType];
-  const name = CARD_NAMES[displayType];
-  const categoryLabel = CATEGORY_LABELS[card.category];
 
   // Indicateur discret "FAUX" visible uniquement par le propriétaire
   const showFauxBadge = isOwnedByViewer && card.type === CardType.DE_FAUX;
@@ -84,22 +82,9 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
       {/* Inner glow overlay */}
       <View style={styles.innerGlow} />
 
-      {/* Emoji */}
+      {/* Emoji — seul design visible sur la carte */}
       <Text style={[styles.emoji, small && styles.emojiSmall]}>
         {emoji}
-      </Text>
-
-      {/* Card name */}
-      <Text
-        style={[styles.cardName, small && styles.cardNameSmall]}
-        numberOfLines={2}
-      >
-        {name}
-      </Text>
-
-      {/* Category label at bottom */}
-      <Text style={[styles.categoryLabel, small && styles.categoryLabelSmall]}>
-        {categoryLabel}
       </Text>
 
       {/* Badge "FAUX" — visible seulement par le propriétaire */}
@@ -174,36 +159,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
   },
   emoji: {
-    fontSize: 36,
+    fontSize: 52,
     textAlign: 'center',
-    marginBottom: 4,
   },
   emojiSmall: {
-    fontSize: 24,
-    marginBottom: 2,
-  },
-  cardName: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-    marginBottom: 2,
-  },
-  cardNameSmall: {
-    fontSize: 8,
-    marginBottom: 1,
-  },
-  categoryLabel: {
-    fontSize: 8,
-    color: 'rgba(255,255,255,0.75)',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  categoryLabelSmall: {
-    fontSize: 6,
+    fontSize: 34,
   },
   faceDown: {
     backgroundColor: '#1a1a2e',

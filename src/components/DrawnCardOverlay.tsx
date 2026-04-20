@@ -5,9 +5,9 @@ import { CardComponent } from './CardComponent';
 
 interface DrawnCardOverlayProps {
   card: Card;
-  eventType: 'draw' | 'hitman_kill' | 'ange_save';
+  eventType: 'draw' | 'hitman_kill' | 'ange_save' | 'ange_choice';
   playerName: string;
-  onDismiss: () => void;
+  onDismiss: (choice?: 'use_ange' | 'skip_ange') => void;
 }
 
 export function DrawnCardOverlay({ card, eventType, playerName, onDismiss }: DrawnCardOverlayProps) {
@@ -34,29 +34,35 @@ export function DrawnCardOverlay({ card, eventType, playerName, onDismiss }: Dra
 
   const bgColor = eventType === 'hitman_kill'
     ? 'rgba(100, 0, 0, 0.97)'
+    : eventType === 'ange_choice'
+    ? 'rgba(60, 40, 0, 0.97)'
     : eventType === 'ange_save'
     ? 'rgba(10, 60, 20, 0.97)'
     : 'rgba(10, 10, 20, 0.97)';
 
   const title = eventType === 'hitman_kill'
     ? '💀 HITMAN !'
+    : eventType === 'ange_choice'
+    ? '🔫 HITMAN !'
     : eventType === 'ange_save'
     ? '👼 SAUVÉ !'
     : '🃏 Carte piochée';
 
   const subtitle = eventType === 'hitman_kill'
     ? `${playerName} est éliminé !`
+    : eventType === 'ange_choice'
+    ? `${playerName} a pioché un Hitman ! Tu as un Ange — que fais-tu ?`
     : eventType === 'ange_save'
     ? `${playerName} a pioché un Hitman… mais l'Ange l'a sauvé !`
     : `${playerName} a pioché :`;
 
-  const btnLabel = eventType === 'hitman_kill'
-    ? 'Continuer'
+  const titleColor = eventType === 'hitman_kill'
+    ? '#ff4444'
+    : eventType === 'ange_choice'
+    ? '#ffaa00'
     : eventType === 'ange_save'
-    ? 'Continuer'
-    : 'Mettre dans ma main';
-
-  const titleColor = eventType === 'hitman_kill' ? '#ff4444' : eventType === 'ange_save' ? '#44ff88' : '#6699ff';
+    ? '#44ff88'
+    : '#6699ff';
 
   return (
     <Animated.View style={[styles.overlay, { opacity: fadeAnim, backgroundColor: bgColor }]}>
@@ -76,13 +82,26 @@ export function DrawnCardOverlay({ card, eventType, playerName, onDismiss }: Dra
         </Text>
       )}
 
-      {/* Bouton explicite */}
-      <Pressable
-        style={[styles.btn, eventType === 'hitman_kill' ? styles.btnDanger : styles.btnNormal]}
-        onPress={onDismiss}
-      >
-        <Text style={styles.btnText}>{btnLabel}</Text>
-      </Pressable>
+      {/* Choix Ange : deux boutons */}
+      {eventType === 'ange_choice' ? (
+        <View style={styles.choiceButtons}>
+          <Pressable style={[styles.btn, styles.btnSave]} onPress={() => onDismiss('use_ange')}>
+            <Text style={styles.btnText}>{CARD_EMOJIS[CardType.ANGE]} Utiliser l'Ange</Text>
+          </Pressable>
+          <Pressable style={[styles.btn, styles.btnDanger]} onPress={() => onDismiss('skip_ange')}>
+            <Text style={styles.btnText}>💀 Accepter l'élimination</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          style={[styles.btn, eventType === 'hitman_kill' ? styles.btnDanger : styles.btnNormal]}
+          onPress={() => onDismiss()}
+        >
+          <Text style={styles.btnText}>
+            {eventType === 'hitman_kill' || eventType === 'ange_save' ? 'Continuer' : 'Mettre dans ma main'}
+          </Text>
+        </Pressable>
+      )}
     </Animated.View>
   );
 }
@@ -125,6 +144,10 @@ const styles = StyleSheet.create({
     minWidth: 220,
     alignItems: 'center',
   },
+  choiceButtons: {
+    width: '100%',
+    gap: 12,
+  },
   btnNormal: {
     backgroundColor: '#1a3a6a',
     borderWidth: 1,
@@ -134,6 +157,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#3a0000',
     borderWidth: 1,
     borderColor: '#cc0000',
+  },
+  btnSave: {
+    backgroundColor: '#0a3a1a',
+    borderWidth: 1,
+    borderColor: '#00aa44',
   },
   btnText: {
     color: '#fff',

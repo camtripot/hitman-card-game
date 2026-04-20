@@ -86,7 +86,9 @@ export class GameEngine {
   static dispatch(state: GameState, action: PlayerAction): GameState {
     switch (action.type) {
       case 'DRAW_CARD':
-        return GameEngine.handleDrawCard(state, action.playerId);
+        return GameEngine.handleDrawCard(state, action.playerId, false);
+      case 'DRAW_CARD_SKIP_ANGE':
+        return GameEngine.handleDrawCard(state, action.playerId, true);
       case 'PLAY_CARD':
         return GameEngine.handlePlayCard(state, action.playerId, action.cardInstanceId);
       case 'CHOOSE_TARGET':
@@ -193,7 +195,7 @@ export class GameEngine {
 
   // --- Private handlers ---
 
-  private static handleDrawCard(state: GameState, playerId: string): GameState {
+  private static handleDrawCard(state: GameState, playerId: string, skipAnge = false): GameState {
     const currentPlayer = state.players[state.currentPlayerIndex];
     if (currentPlayer.id !== playerId || state.phase !== GamePhase.WAITING_FOR_TURN_ACTION) {
       return state;
@@ -207,7 +209,7 @@ export class GameEngine {
     if (drawnCard.type === CardType.HITMAN) {
       const hasAnge = currentPlayer.hand.some(c => c.type === CardType.ANGE);
 
-      if (hasAnge) {
+      if (hasAnge && !skipAnge) {
         const angeCard = currentPlayer.hand.find(c => c.type === CardType.ANGE)!;
         const newHand = currentPlayer.hand.filter(c => c.id !== angeCard.id);
         const newPlayers = state.players.map(p =>
@@ -303,11 +305,18 @@ export class GameEngine {
       },
     };
 
-    // PEEK cards (Voyante) : pas de fenêtre de réaction, directement l'effet
+    // PEEK cards : pas de fenêtre de réaction, directement l'effet
     if (cardCat === CardCategory.PEEK) {
       const handler = getEffectHandler(card.type);
       if (handler) {
         const result = handler(newState, effect);
+        // If the effect still needs a target (Voleur) or card choice, keep the stack
+        if (result.nextPhase === GamePhase.AWAITING_TARGET) {
+          return { ...result.state, effectStack: [effect], phase: GamePhase.AWAITING_TARGET };
+        }
+        if (result.nextPhase === GamePhase.AWAITING_CARD_CHOICE) {
+          return { ...result.state, effectStack: [effect], phase: GamePhase.AWAITING_CARD_CHOICE };
+        }
         return { ...result.state, effectStack: [], phase: result.nextPhase ?? GamePhase.WAITING_FOR_TURN_ACTION };
       }
       return { ...newState, effectStack: [], phase: GamePhase.WAITING_FOR_TURN_ACTION };
@@ -333,11 +342,20 @@ export class GameEngine {
 
     const updatedEffect: PendingEffect = { ...topEffect, targetPlayerId };
     const newStack = [...state.effectStack.slice(0, -1), updatedEffect];
+    const newState: GameState = { ...state, effectStack: newStack };
 
-    const newState: GameState = {
-      ...state,
-      effectStack: newStack,
-    };
+    // PEEK cards (Voleur) skip the reaction window — resolve directly
+    const cardCat = CARD_CATEGORIES[topEffect.cardType];
+    if (cardCat === CardCategory.PEEK) {
+      const handler = getEffectHandler(topEffect.cardType);
+      if (handler) {
+        const result = handler(newState, updatedEffect);
+        if (result.nextPhase === GamePhase.AWAITING_CARD_CHOICE) {
+          return { ...result.state, effectStack: newStack, phase: GamePhase.AWAITING_CARD_CHOICE };
+        }
+        return { ...result.state, effectStack: [], phase: result.nextPhase ?? GamePhase.WAITING_FOR_TURN_ACTION };
+      }
+    }
 
     // Open reaction window with the target set
     return GameEngine.openReactionWindow(newState, updatedEffect);
@@ -378,7 +396,8 @@ export class GameEngine {
       },
     };
 
-    return GameEngine.advanceTurn(newState);
+    // Voleur is PEEK: stay on the thief's turn (don't advance)
+    return { ...newState, phase: GamePhase.WAITING_FOR_TURN_ACTION };
   }
 
   private static handleReactWithCard(state: GameState, playerId: string, cardInstanceId: string): GameState {

@@ -1,0 +1,34 @@
+import { CardType } from './Card';
+
+export const CARD_DESCRIPTIONS: Record<CardType, string> = {
+  [CardType.VOYANTE]:
+    'Regarde les 3 cartes du dessus de la pioche. Ton tour continue ensuite.',
+  [CardType.FUITE]:
+    "Passe ton tour. Aucune action supplémentaire n'est requise.",
+  [CardType.CHANGEMENT_DE_SENS]:
+    'Inverse le sens du jeu et passe ton tour. Le joueur suivant change de côté.',
+  [CardType.BOMBE]:
+    "Choisis un joueur : c'est immédiatement son tour et il doit jouer 2 fois de suite. Si tu avais des tours restants, il les récupère en plus.",
+  [CardType.VOLEUR]:
+    "Choisis un joueur : il doit te donner une carte de sa main (son choix). Ton tour continue ensuite.",
+  [CardType.DE_VRAI]:
+    'Mélange aléatoirement la pioche. Ton tour continue ensuite.',
+  [CardType.DE_FAUX]:
+    "Fait semblant de mélanger la pioche sans la changer. Seul toi sais que c'est faux ! Ton tour continue ensuite.",
+  [CardType.DERNIERE_PIOCHE]:
+    "Pioche la dernière carte du bas de la pioche au lieu du dessus. Met fin à ton tour.",
+  [CardType.MIROIR]:
+    "Copie l'effet de la dernière carte jouée, mais avec toi comme source. Jouable en réaction.",
+  [CardType.RENVOIE]:
+    "Redirige une carte ciblante vers un autre joueur de ton choix. Tu deviens le choisisseur. Jouable en réaction.",
+  [CardType.METEORITE]:
+    "Annule la dernière carte jouée et retire toutes les copies de ce type des mains de tous les joueurs (remises dans la pioche mélangée). Jouable en réaction.",
+  [CardType.CHAINE]:
+    "Bloque un type de carte pendant 3 tours de joueurs : plus personne ne peut jouer cette carte. Jouable en réaction.",
+  [CardType.STOP]:
+    "Annule l'effet de la dernière carte jouée. Jouable en réaction.",
+  [CardType.HITMAN]:
+    "Si tu pioches cette carte, tu es éliminé ! À moins d'avoir un Ange pour te sauver.",
+  [CardType.ANGE]:
+    "Te protège automatiquement si tu pioches un Hitman. L'Ange est défaussé à la place de ta vie.",
+};

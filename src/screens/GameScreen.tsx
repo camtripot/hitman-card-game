@@ -13,6 +13,7 @@ import { CardPreview } from '../components/CardPreview';
 import { ChainIndicator } from '../components/ChainIndicator';
 import { EventLog } from '../components/EventLog';
 import { DrawnCardOverlay } from '../components/DrawnCardOverlay';
+import { CardPreviewModal } from '../components/CardPreviewModal';
 import { HandRevealScreen } from './HandRevealScreen';
 import { ResultsScreen } from './ResultsScreen';
 
@@ -34,7 +35,7 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
 
   // ── Animation pioche ──
   const [drawnCard, setDrawnCard] = useState<Card | null>(null);
-  const [drawnCardEvent, setDrawnCardEvent] = useState<'draw' | 'hitman_kill' | 'ange_save'>('draw');
+  const [drawnCardEvent, setDrawnCardEvent] = useState<'draw' | 'hitman_kill' | 'ange_save' | 'ange_choice'>('draw');
   const [drawnByPlayer, setDrawnByPlayer] = useState('');
 
   // ── Écran élimination ──
@@ -44,6 +45,9 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   // ── Mode spectateur ──
   const [isSpectating, setIsSpectating] = useState(false);
   const [spectatingPlayerId, setSpectatingPlayerId] = useState<string | null>(null);
+
+  // ── Prévisualisation carte ──
+  const [previewCard, setPreviewCard] = useState<Card | null>(null);
 
   // ── Animation jeu de carte ──
   const flyAnim = useRef(new Animated.Value(0)).current;
@@ -90,12 +94,20 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
     }
   }, [flyingCard, pendingPlayCardId]);
 
+  // Clic sur une carte → ouvrir la prévisualisation
   const handlePlayCard = useCallback((cardId: string) => {
     const card = gameState?.players.find(p => p.id === myPlayerId)?.hand.find(c => c.id === cardId);
     if (!card) return;
+    setPreviewCard(card);
+  }, [gameState, myPlayerId]);
 
-    // Lancer l'animation
-    setFlyingCard(card);
+  // Confirmation depuis la prévisualisation → lancer l'animation puis dispatcher
+  const handleConfirmPlay = useCallback(() => {
+    if (!previewCard) return;
+    const cardId = previewCard.id;
+    setPreviewCard(null);
+
+    setFlyingCard(previewCard);
     flyAnim.setValue(0);
     setPendingPlayCardId(cardId);
 
@@ -106,31 +118,45 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
     }).start(() => {
       setFlyingCard(null);
     });
-  }, [gameState, myPlayerId, flyAnim]);
+  }, [previewCard, flyAnim]);
 
   const handleDraw = useCallback(() => {
-    if (gameState && gameState.drawPile.length > 0) {
-      const topCard = gameState.drawPile[0];
-      const currentP = gameState.players[gameState.currentPlayerIndex];
-      const hasAnge = currentP.hand.some(c => c.type === CardType.ANGE);
-      setDrawnCard(topCard);
-      setDrawnByPlayer(currentP.name);
-      setDrawnCardEvent(
-        topCard.type === CardType.HITMAN
-          ? (hasAnge ? 'ange_save' : 'hitman_kill')
-          : 'draw'
-      );
+    if (!gameState || gameState.drawPile.length === 0) return;
+    const topCard = gameState.drawPile[0];
+    const currentP = gameState.players[gameState.currentPlayerIndex];
+    const hasAnge = currentP.hand.some(c => c.type === CardType.ANGE);
+
+    setDrawnCard(topCard);
+    setDrawnByPlayer(currentP.name);
+
+    if (topCard.type === CardType.HITMAN && hasAnge) {
+      // Choix manuel : on n'envoie PAS encore l'action au moteur
+      setDrawnCardEvent('ange_choice');
+    } else if (topCard.type === CardType.HITMAN) {
+      setDrawnCardEvent('hitman_kill');
+      dispatch({ type: 'DRAW_CARD', playerId: myPlayerId });
+    } else {
+      setDrawnCardEvent('draw');
+      dispatch({ type: 'DRAW_CARD', playerId: myPlayerId });
     }
-    dispatch({ type: 'DRAW_CARD', playerId: myPlayerId });
   }, [dispatch, myPlayerId, gameState]);
 
-  const handleDismissDrawnCard = useCallback(() => {
-    if (drawnCardEvent === 'hitman_kill') {
+  const handleDismissDrawnCard = useCallback((choice?: 'use_ange' | 'skip_ange') => {
+    if (drawnCardEvent === 'ange_choice') {
+      if (choice === 'use_ange') {
+        dispatch({ type: 'DRAW_CARD', playerId: myPlayerId });
+      } else {
+        dispatch({ type: 'DRAW_CARD_SKIP_ANGE', playerId: myPlayerId });
+        // L'élimination se réglera via le moteur ; on affiche l'écran éliminé
+        setEliminatedPlayerName(drawnByPlayer);
+        setShowEliminatedScreen(true);
+      }
+    } else if (drawnCardEvent === 'hitman_kill') {
       setEliminatedPlayerName(drawnByPlayer);
       setShowEliminatedScreen(true);
     }
     setDrawnCard(null);
-  }, [drawnCardEvent, drawnByPlayer]);
+  }, [drawnCardEvent, drawnByPlayer, dispatch, myPlayerId]);
 
   const handleChooseTarget = useCallback((targetId: string) => {
     dispatch({ type: 'CHOOSE_TARGET', playerId: myPlayerId, targetPlayerId: targetId });
@@ -282,6 +308,7 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
           drawPileCount={gameState.drawPile.length}
           discardPileCount={gameState.discardPile.length}
           lastPlayedCardType={gameState.lastPlayedCardType}
+          mustPlayCount={gameState.mustPlayCount}
           onDraw={() => {}}
           canDraw={false}
         />
@@ -351,6 +378,7 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
         drawPileCount={gameState.drawPile.length}
         discardPileCount={gameState.discardPile.length}
         lastPlayedCardType={gameState.lastPlayedCardType}
+        mustPlayCount={gameState.mustPlayCount}
         onDraw={handleDraw}
         canDraw={canDraw}
       />
@@ -421,13 +449,21 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
             },
           ]}
         >
-          {/* On importe CardComponent ici directement */}
           {React.createElement(
             require('../components/CardComponent').CardComponent,
             { card: flyingCard, disabled: true }
           )}
         </Animated.View>
       )}
+
+      {/* Prévisualisation carte au clic */}
+      <CardPreviewModal
+        card={previewCard}
+        canPlay={previewCard ? playableCardIds.includes(previewCard.id) : false}
+        isOwnedByViewer={true}
+        onPlay={handleConfirmPlay}
+        onCancel={() => setPreviewCard(null)}
+      />
     </View>
   );
 }

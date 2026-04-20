@@ -32,6 +32,7 @@ interface PokerTableProps {
   drawPileCount: number;
   discardPileCount: number;
   lastPlayedCardType: CardType | null;
+  mustPlayCount: number;
   onDraw: () => void;
   canDraw: boolean;
 }
@@ -43,6 +44,7 @@ export function PokerTable({
   drawPileCount,
   discardPileCount,
   lastPlayedCardType,
+  mustPlayCount,
   onDraw,
   canDraw,
 }: PokerTableProps) {
@@ -143,6 +145,12 @@ export function PokerTable({
               {!isElim && (
                 <View style={styles.cardBadge}>
                   <Text style={styles.cardBadgeText}>{player.hand.length}</Text>
+                </View>
+              )}
+              {/* Badge tours restants (bombe) */}
+              {isActive && mustPlayCount > 1 && (
+                <View style={styles.turnBadge}>
+                  <Text style={styles.turnBadgeText}>×{mustPlayCount}</Text>
                 </View>
               )}
             </View>
@@ -332,6 +340,19 @@ const styles = StyleSheet.create({
     borderColor: '#0a3d1a',
   },
   cardBadgeText: { fontSize: 9, fontWeight: 'bold', color: '#fff' },
+  turnBadge: {
+    position: 'absolute',
+    bottom: -2, left: -4,
+    backgroundColor: '#e67e22',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderWidth: 1.5,
+    borderColor: '#0a3d1a',
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  turnBadgeText: { fontSize: 9, fontWeight: 'bold', color: '#fff' },
   playerName: {
     color: '#aaa',
     fontSize: 10,
