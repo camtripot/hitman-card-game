@@ -6,4 +6,5 @@ export type PlayerAction =
   | { type: 'CHOOSE_CARD_TO_GIVE'; playerId: string; cardInstanceId: string }
   | { type: 'REACT_WITH_CARD'; playerId: string; cardInstanceId: string }
   | { type: 'PASS_REACTION'; playerId: string }
-  | { type: 'ACKNOWLEDGE_VOYANTE'; playerId: string };
+  | { type: 'ACKNOWLEDGE_VOYANTE'; playerId: string }
+  | { type: 'PLACE_HITMAN'; playerId: string; position: number };

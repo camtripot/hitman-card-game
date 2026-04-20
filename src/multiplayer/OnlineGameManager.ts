@@ -34,6 +34,7 @@ export interface OnlineGameState {
   lastPlayedCardType: string | null;
   eliminatedPlayerId: string | null;
   isAwaitingCardChoice: boolean;
+  pendingHitmanCard: any | null;
 }
 
 export interface RoomInfo {

@@ -15,6 +15,7 @@ import { CardPreview } from '../components/CardPreview';
 import { ChainIndicator } from '../components/ChainIndicator';
 import { EventLog } from '../components/EventLog';
 import { CardPreviewModal } from '../components/CardPreviewModal';
+import { HitmanPlacerOverlay } from '../components/HitmanPlacerOverlay';
 import { ResultsScreen } from './ResultsScreen';
 import { isInstant } from '../engine/CardEffects';
 
@@ -138,6 +139,16 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   const myPlayer = gameState.players.find(p => p.id === myPlayerId);
   const myHand: Card[] = myPlayer?.hand || [];
   const isMyTurn = currentPlayer?.id === myPlayerId;
+
+  // Choix de la position du Hitman (après sauvegarde par Ange)
+  if (gameState.phase === GamePhase.CHOOSING_HITMAN_POSITION && isMyTurn) {
+    return (
+      <HitmanPlacerOverlay
+        pileSize={gameState.drawPileCount}
+        onPlace={(position) => manager.dispatch({ type: 'PLACE_HITMAN', playerId: myPlayerId, position })}
+      />
+    );
+  }
 
   // --- Calcul des cartes jouables (identique au moteur local) ---
   const playableCardIds: string[] = [];

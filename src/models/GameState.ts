@@ -11,6 +11,7 @@ export enum GamePhase {
   APPLYING_EFFECT = 'applying_effect',
   PLAYER_ELIMINATED = 'player_eliminated',
   VIEWING_VOYANTE = 'viewing_voyante',
+  CHOOSING_HITMAN_POSITION = 'choosing_hitman_position',
   GAME_OVER = 'game_over',
 }
 
@@ -69,6 +70,7 @@ export interface GameState {
   voyanteCards: Card[];
   lastPlayedCardType: CardType | null;
   eliminatedPlayerId: string | null;
+  pendingHitmanCard: Card | null;
   config: GameConfig;
 }
 

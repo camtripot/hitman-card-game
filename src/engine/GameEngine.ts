@@ -79,6 +79,7 @@ export class GameEngine {
       voyanteCards: [],
       lastPlayedCardType: null,
       eliminatedPlayerId: null,
+      pendingHitmanCard: null,
       config: fullConfig,
     };
   }
@@ -101,6 +102,8 @@ export class GameEngine {
         return GameEngine.handlePassReaction(state, action.playerId);
       case 'ACKNOWLEDGE_VOYANTE':
         return GameEngine.handleAcknowledgeVoyante(state, action.playerId);
+      case 'PLACE_HITMAN':
+        return GameEngine.handlePlaceHitman(state, action.playerId, action.position);
       default:
         return state;
     }
@@ -193,6 +196,14 @@ export class GameEngine {
         actions.push({ type: 'ACKNOWLEDGE_VOYANTE', playerId });
         break;
       }
+
+      case GamePhase.CHOOSING_HITMAN_POSITION: {
+        if (currentPlayer.id !== playerId) break;
+        if (!state.pendingHitmanCard) break;
+        // Sentinel: any position 0..drawPile.length is valid (validated in handlePlaceHitman)
+        actions.push({ type: 'PLACE_HITMAN', playerId, position: 0 });
+        break;
+      }
     }
 
     return actions;
@@ -219,32 +230,39 @@ export class GameEngine {
       const hasAnge = currentPlayer.hand.some(c => c.type === CardType.ANGE);
 
       if (hasAnge && !skipAnge) {
+        // Ange sauve le joueur — il doit choisir où remettre le Hitman
         const angeCard = currentPlayer.hand.find(c => c.type === CardType.ANGE)!;
         const newHand = currentPlayer.hand.filter(c => c.id !== angeCard.id);
         const newPlayers = state.players.map(p =>
           p.id === playerId ? { ...p, hand: newHand } : p
         );
-        const newState: GameState = {
+        return {
           ...state,
           drawPile: newDrawPile,
-          discardPile: [...state.discardPile, drawnCard, angeCard],
+          discardPile: [...state.discardPile, angeCard],
           players: newPlayers,
+          pendingHitmanCard: drawnCard,
+          phase: GamePhase.CHOOSING_HITMAN_POSITION,
           lastEvent: {
             type: 'ange_save',
             playerId,
             message: `${currentPlayer.name} a pioché un Hitman mais a été sauvé par un Ange !`,
           },
         };
-        return GameEngine.advanceTurn(newState);
       } else {
-        // Player is eliminated
+        // Joueur éliminé — le Hitman repart à une position aléatoire dans la pioche
+        const randomPos = Math.floor(Math.random() * (newDrawPile.length + 1));
+        const newDrawPileWithHitman = [
+          ...newDrawPile.slice(0, randomPos),
+          drawnCard,
+          ...newDrawPile.slice(randomPos),
+        ];
         const newPlayers = state.players.map(p =>
           p.id === playerId ? { ...p, isEliminated: true } : p
         );
         const newState: GameState = {
           ...state,
-          drawPile: newDrawPile,
-          discardPile: [...state.discardPile, drawnCard],
+          drawPile: newDrawPileWithHitman,
           players: newPlayers,
           eliminatedPlayerId: playerId,
           lastEvent: {
@@ -574,6 +592,33 @@ export class GameEngine {
     };
   }
 
+  private static handlePlaceHitman(state: GameState, playerId: string, position: number): GameState {
+    if (state.phase !== GamePhase.CHOOSING_HITMAN_POSITION) return state;
+    const currentPlayer = state.players[state.currentPlayerIndex];
+    if (currentPlayer.id !== playerId) return state;
+    if (!state.pendingHitmanCard) return state;
+
+    const clampedPos = Math.max(0, Math.min(position, state.drawPile.length));
+    const newDrawPile = [
+      ...state.drawPile.slice(0, clampedPos),
+      state.pendingHitmanCard,
+      ...state.drawPile.slice(clampedPos),
+    ];
+
+    const newState: GameState = {
+      ...state,
+      drawPile: newDrawPile,
+      pendingHitmanCard: null,
+      lastEvent: {
+        type: 'hitman_placed',
+        playerId,
+        message: `${currentPlayer.name} a caché le Hitman dans la pioche`,
+      },
+    };
+
+    return GameEngine.advanceTurn(newState);
+  }
+
   private static handleAcknowledgeVoyante(state: GameState, playerId: string): GameState {
     if (state.phase !== GamePhase.VIEWING_VOYANTE) return state;
     const currentPlayer = state.players[state.currentPlayerIndex];
@@ -699,6 +744,7 @@ export class GameEngine {
       reactionWindow: null,
       voyanteCards: [],
       eliminatedPlayerId: null,
+      pendingHitmanCard: null,
     };
   }
 

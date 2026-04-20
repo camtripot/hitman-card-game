@@ -14,6 +14,7 @@ import { ChainIndicator } from '../components/ChainIndicator';
 import { EventLog } from '../components/EventLog';
 import { DrawnCardOverlay } from '../components/DrawnCardOverlay';
 import { CardPreviewModal } from '../components/CardPreviewModal';
+import { HitmanPlacerOverlay } from '../components/HitmanPlacerOverlay';
 import { HandRevealScreen } from './HandRevealScreen';
 import { ResultsScreen } from './ResultsScreen';
 
@@ -272,6 +273,16 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const myPlayer = gameState.players.find(p => p.id === myPlayerId);
   const isMyTurn = currentPlayer?.id === myPlayerId;
+
+  // Choix de la position du Hitman (après sauvegarde par Ange)
+  if (gameState.phase === GamePhase.CHOOSING_HITMAN_POSITION && isMyTurn) {
+    return (
+      <HitmanPlacerOverlay
+        pileSize={gameState.drawPile.length}
+        onPlace={(position) => dispatch({ type: 'PLACE_HITMAN', playerId: myPlayerId, position })}
+      />
+    );
+  }
 
   const showTargetPicker = gameState.phase === GamePhase.AWAITING_TARGET &&
     validActions.some(a => a.type === 'CHOOSE_TARGET');

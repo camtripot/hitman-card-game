@@ -34,6 +34,7 @@ export interface FilteredGameState {
   lastPlayedCardType: CardType | null;
   eliminatedPlayerId: string | null;
   isAwaitingCardChoice: boolean;
+  pendingHitmanCard: Card | null;
 }
 
 export class ServerGameEngine {
@@ -128,6 +129,8 @@ export class ServerGameEngine {
       lastPlayedCardType: this.state.lastPlayedCardType,
       eliminatedPlayerId: this.state.eliminatedPlayerId,
       isAwaitingCardChoice: GameEngine.getValidActions(this.state, forPlayerId).some(a => a.type === 'CHOOSE_CARD_TO_GIVE'),
+      // Visible uniquement pour le joueur qui doit placer le Hitman
+      pendingHitmanCard: forPlayerId === currentPlayer?.id ? this.state.pendingHitmanCard : null,
     };
   }
 
