@@ -10,7 +10,7 @@ import {
 import { PlayerAction } from '../models/Actions';
 import { createDeck, dealCards, shuffle } from './DeckFactory';
 import { getEffectHandler, needsTarget, isInstant } from './CardEffects';
-import { DEFAULT_CARDS_PER_PLAYER } from './rules';
+import { DEFAULT_CARDS_PER_PLAYER, CHAIN_DURATION_TURNS } from './rules';
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -122,14 +122,23 @@ export class GameEngine {
           actions.push({ type: 'DRAW_CARD', playerId });
         }
 
-        // Can play turn-ending cards AND peek cards (voyante)
+        // Can play turn-ending cards AND peek cards
         for (const card of player.hand) {
           const cat = CARD_CATEGORIES[card.type];
+          const isChained = state.chainedCards.some(c => c.cardType === card.type);
+          if (isChained) continue;
+
           if (cat === CardCategory.TURN_ENDING || cat === CardCategory.PEEK) {
-            const isChained = state.chainedCards.some(c => c.cardType === card.type);
-            if (!isChained) {
-              actions.push({ type: 'PLAY_CARD', playerId, cardInstanceId: card.id });
-            }
+            actions.push({ type: 'PLAY_CARD', playerId, cardInstanceId: card.id });
+          }
+
+          // Miroir, Chaîne, Météorite also playable on your turn if discard pile is not empty
+          if (
+            cat === CardCategory.INSTANT &&
+            state.lastPlayedCardType !== null &&
+            (card.type === CardType.MIROIR || card.type === CardType.CHAINE || card.type === CardType.METEORITE)
+          ) {
+            actions.push({ type: 'PLAY_CARD', playerId, cardInstanceId: card.id });
           }
         }
         break;
@@ -273,7 +282,13 @@ export class GameEngine {
 
     const card = currentPlayer.hand.find(c => c.id === cardInstanceId);
     const cardCat = card ? CARD_CATEGORIES[card.type] : null;
-    if (!card || (cardCat !== CardCategory.TURN_ENDING && cardCat !== CardCategory.PEEK)) return state;
+
+    // Miroir/Chaîne/Météorite also valid on your turn when discard pile is not empty
+    const isInstantOnTurn = cardCat === CardCategory.INSTANT &&
+      state.lastPlayedCardType !== null &&
+      (card?.type === CardType.MIROIR || card?.type === CardType.CHAINE || card?.type === CardType.METEORITE);
+
+    if (!card || (cardCat !== CardCategory.TURN_ENDING && cardCat !== CardCategory.PEEK && !isInstantOnTurn)) return state;
 
     // Check if card is chained
     if (state.chainedCards.some(c => c.cardType === card.type)) return state;
@@ -304,6 +319,82 @@ export class GameEngine {
         message: `${currentPlayer.name} a joué ${card.type}`,
       },
     };
+
+    // INSTANT cards played on your own turn (Miroir, Chaîne, Météorite)
+    if (isInstantOnTurn) {
+      const targetType = state.lastPlayedCardType!;
+
+      if (card.type === CardType.CHAINE) {
+        const newChained = [
+          ...newState.chainedCards,
+          { cardType: targetType, turnsRemaining: CHAIN_DURATION_TURNS },
+        ];
+        return GameEngine.advanceTurn({
+          ...newState,
+          effectStack: [],
+          chainedCards: newChained,
+          lastEvent: {
+            type: 'chaine',
+            cardType: targetType,
+            message: `Les cartes ${targetType} sont enchaînées pour ${CHAIN_DURATION_TURNS} tours !`,
+          },
+        });
+      }
+
+      if (card.type === CardType.METEORITE) {
+        const removedCards: Card[] = [];
+        const players = newState.players.map(p => {
+          const kept = p.hand.filter(c => c.type !== targetType);
+          const removed = p.hand.filter(c => c.type === targetType);
+          removedCards.push(...removed);
+          return { ...p, hand: kept };
+        });
+        const newDrawPile = shuffle([...newState.drawPile, ...removedCards]);
+        return GameEngine.advanceTurn({
+          ...newState,
+          effectStack: [],
+          players,
+          drawPile: newDrawPile,
+          lastEvent: {
+            type: 'meteorite',
+            cardType: targetType,
+            message: `Météorite ! Toutes les cartes ${targetType} sont retirées des mains !`,
+          },
+        });
+      }
+
+      if (card.type === CardType.MIROIR) {
+        const mirrorEffect: PendingEffect = {
+          sourcePlayerId: playerId,
+          cardType: targetType,
+          cardInstanceId: card.id,
+          resolved: false,
+        };
+        const mirrorState: GameState = {
+          ...newState,
+          effectStack: [mirrorEffect],
+          lastEvent: {
+            type: 'miroir',
+            playerId,
+            message: `${currentPlayer.name} a copié l'effet de ${targetType} avec un Miroir !`,
+          },
+        };
+        if (needsTarget(targetType)) {
+          return { ...mirrorState, phase: GamePhase.AWAITING_TARGET };
+        }
+        const handler = getEffectHandler(targetType);
+        if (handler) {
+          const result = handler(mirrorState, mirrorEffect);
+          if (result.nextPhase === GamePhase.AWAITING_TARGET) {
+            return { ...result.state, effectStack: [mirrorEffect], phase: GamePhase.AWAITING_TARGET };
+          }
+          return GameEngine.openReactionWindow(result.state, mirrorEffect);
+        }
+        return GameEngine.openReactionWindow(mirrorState, mirrorEffect);
+      }
+
+      return state; // fallback
+    }
 
     // PEEK cards : pas de fenêtre de réaction, directement l'effet
     if (cardCat === CardCategory.PEEK) {

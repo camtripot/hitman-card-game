@@ -36,7 +36,12 @@ export function LobbyScreen({ route, navigation }: LobbyScreenProps) {
     managerRef.current = manager;
     manager.onRoomUpdate((room) => setCurrentRoom(room));
     manager.onError((err) => setError(err));
-    return () => {};
+    return () => {
+      // Nettoyage : déconnecter le socket si le composant se démonte
+      if (!manager.getRoomCode()) {
+        manager.disconnect();
+      }
+    };
   }, []);
 
   const handleCreate = async () => {

@@ -62,31 +62,54 @@ export class OnlineGameManager {
   private errorListeners: Set<ErrorListener> = new Set();
 
   /** Attend que le socket soit connecté (max timeoutMs ms) */
-  waitForConnection(timeoutMs = 60000): Promise<void> {
+  waitForConnection(timeoutMs = 90000): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.socket?.connected) { resolve(); return; }
+
+      // Si le socket n'existe pas encore, le créer maintenant
+      if (!this.socket) this.connect();
+
       const timer = setTimeout(() => {
+        cleanup();
         reject('Serveur injoignable. Réessaie dans quelques secondes (Render peut mettre ~60s à démarrer).');
       }, timeoutMs);
-      // On écoute seulement "connect" — on laisse socket.io gérer les retries/fallbacks
-      const onConnect = () => { clearTimeout(timer); resolve(); };
-      this.socket?.once('connect', onConnect);
+
+      const onConnect = () => { cleanup(); resolve(); };
+      const onFailed = () => {
+        cleanup();
+        reject('Impossible de joindre le serveur après plusieurs tentatives. Vérifie ta connexion internet.');
+      };
+
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.socket?.off('connect', onConnect);
+        this.socket?.off('reconnect_failed', onFailed);
+      };
+
+      this.socket?.on('connect', onConnect);
+      this.socket?.on('reconnect_failed', onFailed);
     });
   }
 
   connect(): void {
-    if (this.socket?.connected) return;
+    // Ne pas créer un deuxième socket si un existe déjà (même en cours de connexion)
+    if (this.socket) return;
 
     this.socket = io(SERVER_URL, {
       // Polling d'abord : plus fiable sur Render, puis upgrade vers WebSocket
       transports: ['polling', 'websocket'],
       timeout: 20000,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 2000,
+      reconnectionDelayMax: 8000,
     });
 
     this.socket.on('connect', () => {
-      console.log('Connected to server');
+      console.log('Connected to server:', SERVER_URL);
+    });
+
+    this.socket.on('connect_error', (err) => {
+      console.log('Connection error:', err.message);
     });
 
     this.socket.on('game_state', (state: OnlineGameState) => {

@@ -2,7 +2,7 @@ import { CardType } from './Card';
 
 export const CARD_DESCRIPTIONS: Record<CardType, string> = {
   [CardType.VOYANTE]:
-    'Regarde les 3 cartes du dessus de la pioche. Ton tour continue ensuite.',
+    'Regarde les 3 cartes du dessus de la pioche.',
   [CardType.FUITE]:
     "Passe ton tour. Aucune action supplémentaire n'est requise.",
   [CardType.CHANGEMENT_DE_SENS]:
@@ -10,7 +10,7 @@ export const CARD_DESCRIPTIONS: Record<CardType, string> = {
   [CardType.BOMBE]:
     "Choisis un joueur : c'est immédiatement son tour et il doit jouer 2 fois de suite. Si tu avais des tours restants, il les récupère en plus.",
   [CardType.VOLEUR]:
-    "Choisis un joueur : il doit te donner une carte de sa main (son choix). Ton tour continue ensuite.",
+    "Choisis un joueur : il doit te donner une carte de sa main (son choix).",
   [CardType.DE_VRAI]:
     'Mélange aléatoirement la pioche. Ton tour continue ensuite.',
   [CardType.DE_FAUX]:
@@ -18,15 +18,15 @@ export const CARD_DESCRIPTIONS: Record<CardType, string> = {
   [CardType.DERNIERE_PIOCHE]:
     "Pioche la dernière carte du bas de la pioche au lieu du dessus. Met fin à ton tour.",
   [CardType.MIROIR]:
-    "Copie l'effet de la dernière carte jouée, mais avec toi comme source. Jouable en réaction.",
+    "Copie l'effet de la dernière carte jouée, mais avec toi comme source. Jouable en réaction ou pendant ton tour si une carte a déjà été posée.",
   [CardType.RENVOIE]:
-    "Redirige une carte ciblante vers un autre joueur de ton choix. Tu deviens le choisisseur. Jouable en réaction.",
+    "Redirige une carte ciblante vers un autre joueur de ton choix. Tu deviens le choisisseur. Jouable uniquement en réaction.",
   [CardType.METEORITE]:
-    "Annule la dernière carte jouée et retire toutes les copies de ce type des mains de tous les joueurs (remises dans la pioche mélangée). Jouable en réaction.",
+    "Retire toutes les copies de la dernière carte jouée des mains de tous les joueurs (remises dans la pioche mélangée). Jouable en réaction ou pendant ton tour si une carte a déjà été posée.",
   [CardType.CHAINE]:
-    "Bloque un type de carte pendant 3 tours de joueurs : plus personne ne peut jouer cette carte. Jouable en réaction.",
+    "Bloque la dernière carte jouée pendant 3 tours : plus personne ne peut la jouer. Jouable en réaction ou pendant ton tour si une carte a déjà été posée.",
   [CardType.STOP]:
-    "Annule l'effet de la dernière carte jouée. Jouable en réaction.",
+    "Annule l'effet de la dernière carte jouée. Jouable uniquement en réaction.",
   [CardType.HITMAN]:
     "Si tu pioches cette carte, tu es éliminé ! À moins d'avoir un Ange pour te sauver.",
   [CardType.ANGE]:
