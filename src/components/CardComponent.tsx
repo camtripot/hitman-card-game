@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, View } from 'react-native';
+import { Pressable, Text, StyleSheet, View, Image } from 'react-native';
 import { Card, CardCategory, CardType, CARD_NAMES, CARD_EMOJIS } from '../models/Card';
+import { getCardImage } from '../models/CardImages';
 
 interface CardComponentProps {
   card: Card;
@@ -56,11 +57,45 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
 
   const bgColor = CATEGORY_COLORS[card.category];
   const emoji = CARD_EMOJIS[displayType];
+  const cardImage = getCardImage(displayType);
 
   // Indicateur discret "FAUX" visible uniquement par le propriétaire
   const showFauxBadge = isOwnedByViewer && card.type === CardType.DE_FAUX;
   const isPlayable = !disabled;
 
+  // ── Carte avec illustration ──
+  if (cardImage) {
+    return (
+      <Pressable
+        style={[
+          styles.card,
+          styles.cardImage,
+          isPlayable ? styles.playableImage : styles.disabled,
+          small ? styles.small : null,
+        ]}
+        onPress={onPress}
+        disabled={disabled}
+      >
+        <Image
+          source={cardImage}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+
+        {/* Lueur verte quand jouable */}
+        {isPlayable && <View style={styles.playableGlow} />}
+
+        {/* Badge "FAUX" par-dessus l'image */}
+        {showFauxBadge && (
+          <View style={styles.fauxBadge}>
+            <Text style={styles.fauxBadgeText}>FAUX</Text>
+          </View>
+        )}
+      </Pressable>
+    );
+  }
+
+  // ── Carte emoji (fallback) ──
   return (
     <Pressable
       style={[
@@ -68,7 +103,6 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
         { backgroundColor: bgColor },
         isPlayable ? styles.playable : styles.disabled,
         small ? styles.small : null,
-        // Subtle gradient-like effect: darker border on left/top
         {
           borderLeftColor: darken(bgColor, 0.25),
           borderTopColor: darken(bgColor, 0.2),
@@ -79,15 +113,10 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
       onPress={onPress}
       disabled={disabled}
     >
-      {/* Inner glow overlay */}
       <View style={styles.innerGlow} />
-
-      {/* Emoji — seul design visible sur la carte */}
       <Text style={[styles.emoji, small && styles.emojiSmall]}>
         {emoji}
       </Text>
-
-      {/* Badge "FAUX" — visible seulement par le propriétaire */}
       {showFauxBadge && (
         <View style={styles.fauxBadge}>
           <Text style={styles.fauxBadgeText}>FAUX</Text>
@@ -147,6 +176,27 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.4,
     borderColor: 'transparent',
+  },
+
+  // Styles pour cartes avec illustration
+  cardImage: {
+    backgroundColor: '#000',
+    borderWidth: 0,
+    padding: 0,
+  },
+  playableImage: {
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.7)',
+    shadowColor: '#fff',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  playableGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    pointerEvents: 'none' as any,
   },
   innerGlow: {
     position: 'absolute',
