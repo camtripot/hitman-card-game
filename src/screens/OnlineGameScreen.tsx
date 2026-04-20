@@ -1,7 +1,9 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, StatusBar } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  View, Text, StyleSheet, StatusBar, Animated, Dimensions,
+} from 'react-native';
 import { GamePhase } from '../models/GameState';
-import { CardCategory, Card } from '../models/Card';
+import { CardCategory, Card, CardType } from '../models/Card';
 import { OnlineGameManager, OnlineGameState } from '../multiplayer/OnlineGameManager';
 import { TurnBanner } from '../components/TurnBanner';
 import { PlayerRing } from '../components/PlayerRing';
@@ -12,8 +14,11 @@ import { ReactionOverlay } from '../components/ReactionOverlay';
 import { CardPreview } from '../components/CardPreview';
 import { ChainIndicator } from '../components/ChainIndicator';
 import { EventLog } from '../components/EventLog';
+import { CardPreviewModal } from '../components/CardPreviewModal';
 import { ResultsScreen } from './ResultsScreen';
 import { isInstant } from '../engine/CardEffects';
+
+const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
 interface OnlineGameScreenProps {
   route: {
@@ -29,6 +34,11 @@ interface OnlineGameScreenProps {
 export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   const { manager } = route.params;
   const [gameState, setGameState] = useState<OnlineGameState | null>(manager.getGameState());
+  const [previewCard, setPreviewCard] = useState<Card | null>(null);
+
+  // Animation carte jouée
+  const flyAnim = useRef(new Animated.Value(0)).current;
+  const [flyingCard, setFlyingCard] = useState<Card | null>(null);
 
   useEffect(() => {
     const unsubscribe = manager.onStateChange((state) => {
@@ -42,11 +52,34 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
 
   const myPlayerId = manager.getPlayerId();
 
-  // --- All hooks before any return ---
+  // --- Handlers ---
 
   const handlePlayCard = useCallback((cardId: string) => {
+    const myPlayer = gameState?.players.find(p => p.id === myPlayerId);
+    const card = myPlayer?.hand?.find((c: Card) => c.id === cardId);
+    if (!card) return;
+    setPreviewCard(card);
+  }, [gameState, myPlayerId]);
+
+  const handleConfirmPlay = useCallback(() => {
+    if (!previewCard) return;
+    const cardId = previewCard.id;
+    const card = previewCard;
+    setPreviewCard(null);
+
+    // Animation
+    setFlyingCard(card);
+    flyAnim.setValue(0);
+    Animated.timing(flyAnim, {
+      toValue: 1,
+      duration: 380,
+      useNativeDriver: false,
+    }).start(() => {
+      setFlyingCard(null);
+    });
+
     manager.dispatch({ type: 'PLAY_CARD', playerId: myPlayerId, cardInstanceId: cardId });
-  }, [manager, myPlayerId]);
+  }, [previewCard, flyAnim, manager, myPlayerId]);
 
   const handleDraw = useCallback(() => {
     manager.dispatch({ type: 'DRAW_CARD', playerId: myPlayerId });
@@ -72,7 +105,7 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
     manager.dispatch({ type: 'CHOOSE_CARD_TO_GIVE', playerId: myPlayerId, cardInstanceId: cardId });
   }, [manager, myPlayerId]);
 
-  // --- Conditional renders ---
+  // --- Early returns ---
 
   if (!gameState) {
     return (
@@ -106,7 +139,7 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   const myHand: Card[] = myPlayer?.hand || [];
   const isMyTurn = currentPlayer?.id === myPlayerId;
 
-  // Determine valid actions based on phase
+  // --- Calcul des cartes jouables (identique au moteur local) ---
   const playableCardIds: string[] = [];
   const reactableCardIds: string[] = [];
   let canDraw = false;
@@ -114,9 +147,19 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   if (gameState.phase === GamePhase.WAITING_FOR_TURN_ACTION && isMyTurn) {
     canDraw = gameState.drawPileCount > 0;
     for (const card of myHand) {
-      if (card.category === CardCategory.TURN_ENDING) {
-        const isChained = gameState.chainedCards.some((c: any) => c.cardType === card.type);
-        if (!isChained) playableCardIds.push(card.id);
+      const isChained = gameState.chainedCards.some((c: any) => c.cardType === card.type);
+      if (isChained) continue;
+      // Cartes fin de tour ET PEEK (Voyante, Voleur, Dé Vrai, Dé Faux)
+      if (card.category === CardCategory.TURN_ENDING || card.category === CardCategory.PEEK) {
+        playableCardIds.push(card.id);
+      }
+      // Miroir, Chaîne, Météorite jouables sur son tour si une carte a été posée
+      if (
+        card.category === CardCategory.INSTANT &&
+        gameState.lastPlayedCardType !== null &&
+        (card.type === CardType.MIROIR || card.type === CardType.CHAINE || card.type === CardType.METEORITE)
+      ) {
+        playableCardIds.push(card.id);
       }
     }
   }
@@ -135,13 +178,10 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   }
 
   const showTargetPicker = gameState.phase === GamePhase.AWAITING_TARGET && isMyTurn;
-  const showCardChoice = gameState.phase === GamePhase.AWAITING_CARD_CHOICE &&
-    myPlayerId === gameState.players.find(p => {
-      // target of voleur needs to give card
-      return true; // simplified — server validates
-    })?.id;
+  // Le serveur indique si ce joueur doit donner une carte (cible du Voleur)
+  const showCardChoice = gameState.isAwaitingCardChoice;
   const showReaction = gameState.phase === GamePhase.REACTION_WINDOW &&
-    gameState.reactionWindow &&
+    gameState.reactionWindow !== null &&
     gameState.reactionWindow.eligiblePlayerIds.includes(myPlayerId) &&
     !gameState.reactionWindow.passedPlayerIds.includes(myPlayerId);
   const showVoyante = gameState.phase === GamePhase.VIEWING_VOYANTE &&
@@ -168,16 +208,30 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <View style={styles.roomCodeBar}>
-        <Text style={styles.roomCodeText}>Salon: {manager.getRoomCode()}</Text>
+      {/* Bandeau de tour */}
+      <View style={[styles.turnBanner, isMyTurn ? styles.turnBannerMy : styles.turnBannerOther]}>
+        <View style={styles.turnBannerRow}>
+          <Text style={styles.turnText}>
+            {isMyTurn ? '⚔️ Ton tour !' : `⏳ Tour de ${currentPlayer?.name}`}
+          </Text>
+          <Text style={styles.roomCodeText}>#{manager.getRoomCode()}</Text>
+        </View>
+        {gameState.mustPlayCount > 1 && (
+          <Text style={styles.bombText}>💣 Bombe — {gameState.mustPlayCount} actions restantes</Text>
+        )}
+        {gameState.phase === GamePhase.REACTION_WINDOW && (
+          <Text style={styles.phaseText}>⚡ Réaction ouverte !</Text>
+        )}
+        {gameState.phase === GamePhase.VIEWING_VOYANTE && (
+          <Text style={styles.phaseText}>🔮 Voyante…</Text>
+        )}
+        {gameState.phase === GamePhase.AWAITING_TARGET && (
+          <Text style={styles.phaseText}>🎯 Choisis une cible</Text>
+        )}
+        {showCardChoice && (
+          <Text style={styles.phaseText}>🃏 Donne une carte au Voleur</Text>
+        )}
       </View>
-
-      <TurnBanner
-        playerName={currentPlayer?.name || ''}
-        phase={gameState.phase}
-        isMyTurn={isMyTurn}
-        mustPlayCount={gameState.mustPlayCount}
-      />
 
       <PlayerRing
         players={playersForRing}
@@ -187,7 +241,6 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
 
       <View style={styles.gameBody}>
         <ChainIndicator chainedCards={gameState.chainedCards} />
-
         <EventLog event={gameState.lastEvent} />
 
         <View style={styles.centerArea}>
@@ -199,22 +252,28 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
         </View>
       </View>
 
-      <View style={styles.handArea}>
-        {gameState.phase === GamePhase.AWAITING_CARD_CHOICE ? (
-          <PlayerHand
-            cards={myHand}
-            playableCardIds={myHand.map(c => c.id)}
-            onPlayCard={handleChooseCardToGive}
-          />
-        ) : (
-          <PlayerHand
-            cards={myHand}
-            playableCardIds={playableCardIds}
-            onPlayCard={handlePlayCard}
-          />
-        )}
-      </View>
+      {/* Main du joueur */}
+      {myPlayer && (
+        <View style={styles.handArea}>
+          {showCardChoice ? (
+            <PlayerHand
+              cards={myHand}
+              playableCardIds={myHand.map((c: Card) => c.id)}
+              onPlayCard={handleChooseCardToGive}
+              isOwnedByViewer={true}
+            />
+          ) : (
+            <PlayerHand
+              cards={myHand}
+              playableCardIds={playableCardIds}
+              onPlayCard={handlePlayCard}
+              isOwnedByViewer={true}
+            />
+          )}
+        </View>
+      )}
 
+      {/* Overlays */}
       <TargetPicker
         visible={showTargetPicker}
         players={playersForTarget}
@@ -238,6 +297,42 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
         cards={gameState.voyanteCards}
         onDismiss={handleAcknowledgeVoyante}
       />
+
+      {/* Animation carte jouée */}
+      {flyingCard && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.flyingCard,
+            {
+              top: flyAnim.interpolate({ inputRange: [0, 1], outputRange: [SCREEN_H * 0.62, SCREEN_H * 0.28] }),
+              left: SCREEN_W / 2 - 47,
+              opacity: flyAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.9, 0] }),
+              transform: [
+                { scale: flyAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [1, 1.1, 0.7] }) },
+                { rotate: flyAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-8deg'] }) },
+              ],
+            },
+          ]}
+        >
+          {React.createElement(
+            require('../components/CardComponent').CardComponent,
+            { card: flyingCard, disabled: true }
+          )}
+        </Animated.View>
+      )}
+
+      {/* Prévisualisation carte au clic */}
+      <CardPreviewModal
+        card={previewCard}
+        canPlay={previewCard ? (showCardChoice ? true : playableCardIds.includes(previewCard.id)) : false}
+        isOwnedByViewer={true}
+        onPlay={showCardChoice
+          ? () => { if (previewCard) { setPreviewCard(null); handleChooseCardToGive(previewCard.id); } }
+          : handleConfirmPlay
+        }
+        onCancel={() => setPreviewCard(null)}
+      />
     </View>
   );
 }
@@ -245,22 +340,33 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#080810',
     height: '100%' as any,
     maxHeight: '100vh' as any,
     overflow: 'hidden' as any,
   },
-  roomCodeBar: {
-    backgroundColor: '#2c3e50',
-    paddingVertical: 4,
+
+  // Bandeau de tour
+  turnBanner: {
+    paddingVertical: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  roomCodeText: {
-    color: '#f1c40f',
-    fontSize: 12,
-    fontWeight: '600',
+  turnBannerMy: { backgroundColor: '#0d2e18' },
+  turnBannerOther: { backgroundColor: '#100a08' },
+  turnBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
+  turnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 0.3 },
+  roomCodeText: { color: '#2a2a4a', fontSize: 11, fontWeight: '700', letterSpacing: 2 },
+  bombText: { color: '#f39c12', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
+  phaseText: { color: '#7f8fa6', fontSize: 11, marginTop: 2 },
+
   gameBody: {
     flex: 1,
     minHeight: 0,
@@ -271,8 +377,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 0,
   },
+
   handArea: {
     borderTopWidth: 1,
-    borderTopColor: '#2c3e50',
+    borderTopColor: '#0f0f1a',
+    flex: 1,
+    minHeight: 0,
+  },
+
+  // Animation carte volante
+  flyingCard: {
+    position: 'absolute',
+    zIndex: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
   },
 });

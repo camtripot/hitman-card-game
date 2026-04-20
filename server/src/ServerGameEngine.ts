@@ -33,6 +33,7 @@ export interface FilteredGameState {
   voyanteCards: Card[];
   lastPlayedCardType: CardType | null;
   eliminatedPlayerId: string | null;
+  isAwaitingCardChoice: boolean;
 }
 
 export class ServerGameEngine {
@@ -126,6 +127,7 @@ export class ServerGameEngine {
       voyanteCards: forPlayerId === currentPlayer?.id ? this.state.voyanteCards : [],
       lastPlayedCardType: this.state.lastPlayedCardType,
       eliminatedPlayerId: this.state.eliminatedPlayerId,
+      isAwaitingCardChoice: GameEngine.getValidActions(this.state, forPlayerId).some(a => a.type === 'CHOOSE_CARD_TO_GIVE'),
     };
   }
 

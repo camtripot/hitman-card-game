@@ -33,6 +33,7 @@ export interface OnlineGameState {
   voyanteCards: any[];
   lastPlayedCardType: string | null;
   eliminatedPlayerId: string | null;
+  isAwaitingCardChoice: boolean;
 }
 
 export interface RoomInfo {
