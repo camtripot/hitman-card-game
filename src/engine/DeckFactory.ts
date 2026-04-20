@@ -21,12 +21,15 @@ export function shuffle<T>(array: T[]): T[] {
   return shuffled;
 }
 
-export function createDeck(): Card[] {
+export function createDeck(hitmanCount?: number): Card[] {
   cardCounter = 0;
   const deck: Card[] = [];
 
   for (const [type, count] of Object.entries(DECK_COMPOSITION)) {
-    for (let i = 0; i < count; i++) {
+    const actualCount = (type === CardType.HITMAN && hitmanCount !== undefined)
+      ? hitmanCount
+      : count;
+    for (let i = 0; i < actualCount; i++) {
       deck.push(createCard(type as CardType));
     }
   }

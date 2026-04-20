@@ -47,6 +47,8 @@ export interface GameConfig {
   playerNames: string[];
   reactionTimeoutMs: number;
   cardsPerPlayer: number;
+  startWithAnge: boolean;       // Each player starts with an Ange card
+  deadCardsReturnToPile: boolean; // When a player dies, their cards go back to the draw pile
 }
 
 export interface GameState {
@@ -67,10 +69,13 @@ export interface GameState {
   voyanteCards: Card[];
   lastPlayedCardType: CardType | null;
   eliminatedPlayerId: string | null;
+  config: GameConfig;
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
   playerNames: [],
   reactionTimeoutMs: 10000,
   cardsPerPlayer: 4,
+  startWithAnge: false,
+  deadCardsReturnToPile: true,
 };

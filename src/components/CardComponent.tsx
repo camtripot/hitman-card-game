@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, View } from 'react-native';
-import { Card, CardCategory, CARD_NAMES, CARD_EMOJIS } from '../models/Card';
+import { Card, CardCategory, CardType, CARD_NAMES, CARD_EMOJIS } from '../models/Card';
 
 interface CardComponentProps {
   card: Card;
@@ -8,6 +8,8 @@ interface CardComponentProps {
   disabled?: boolean;
   small?: boolean;
   faceDown?: boolean;
+  /** Si false, les De Faux sont affichés comme De Vrai (pour les spectateurs) */
+  isOwnedByViewer?: boolean;
 }
 
 const CATEGORY_COLORS: Record<CardCategory, string> = {
@@ -15,6 +17,7 @@ const CATEGORY_COLORS: Record<CardCategory, string> = {
   [CardCategory.INSTANT]: '#e67e22',
   [CardCategory.LOSING]: '#c0392b',
   [CardCategory.SAVING]: '#27ae60',
+  [CardCategory.PEEK]: '#8e44ad',
 };
 
 const CATEGORY_LABELS: Record<CardCategory, string> = {
@@ -22,9 +25,10 @@ const CATEGORY_LABELS: Record<CardCategory, string> = {
   [CardCategory.INSTANT]: 'Instantan\u00e9e',
   [CardCategory.LOSING]: 'Perdante',
   [CardCategory.SAVING]: 'Sauvetage',
+  [CardCategory.PEEK]: 'Observation',
 };
 
-export function CardComponent({ card, onPress, disabled, small, faceDown }: CardComponentProps) {
+export function CardComponent({ card, onPress, disabled, small, faceDown, isOwnedByViewer = true }: CardComponentProps) {
   if (faceDown) {
     return (
       <View
@@ -45,10 +49,18 @@ export function CardComponent({ card, onPress, disabled, small, faceDown }: Card
     );
   }
 
+  // De Faux → affiché comme De Vrai pour les non-propriétaires
+  const displayType = (!isOwnedByViewer && card.type === CardType.DE_FAUX)
+    ? CardType.DE_VRAI
+    : card.type;
+
   const bgColor = CATEGORY_COLORS[card.category];
-  const emoji = CARD_EMOJIS[card.type];
-  const name = CARD_NAMES[card.type];
+  const emoji = CARD_EMOJIS[displayType];
+  const name = CARD_NAMES[displayType];
   const categoryLabel = CATEGORY_LABELS[card.category];
+
+  // Indicateur discret "FAUX" visible uniquement par le propriétaire
+  const showFauxBadge = isOwnedByViewer && card.type === CardType.DE_FAUX;
   const isPlayable = !disabled;
 
   return (
@@ -89,6 +101,13 @@ export function CardComponent({ card, onPress, disabled, small, faceDown }: Card
       <Text style={[styles.categoryLabel, small && styles.categoryLabelSmall]}>
         {categoryLabel}
       </Text>
+
+      {/* Badge "FAUX" — visible seulement par le propriétaire */}
+      {showFauxBadge && (
+        <View style={styles.fauxBadge}>
+          <Text style={styles.fauxBadgeText}>FAUX</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -198,6 +217,21 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.3)',
     fontWeight: 'bold',
     marginBottom: 2,
+  },
+  fauxBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(200,0,0,0.85)',
+    borderRadius: 3,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+  },
+  fauxBadgeText: {
+    color: '#fff',
+    fontSize: 6,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   faceDownLabel: {
     fontSize: 8,

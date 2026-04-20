@@ -7,8 +7,11 @@ export class LocalGameManager implements GameManager {
   private state: GameState = {} as GameState;
   private listeners: Set<(state: GameState) => void> = new Set();
 
-  initialize(playerNames: string[]): void {
-    this.state = GameEngine.createGame({ playerNames });
+  initialize(playerNames: string[], settings?: { startWithAnge: boolean; deadCardsReturnToPile: boolean }): void {
+    this.state = GameEngine.createGame({
+      playerNames,
+      ...(settings || {}),
+    });
     this.notifyListeners();
   }
 

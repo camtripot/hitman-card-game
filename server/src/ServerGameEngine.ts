@@ -40,8 +40,8 @@ export class ServerGameEngine {
   private reactionTimer: ReturnType<typeof setTimeout> | null = null;
   private onStateChange: ((state: GameState) => void) | null = null;
 
-  startGame(playerNames: string[], playerIds: string[]): GameState {
-    const state = GameEngine.createGame({ playerNames });
+  startGame(playerNames: string[], playerIds: string[], settings?: { startWithAnge: boolean; deadCardsReturnToPile: boolean }): GameState {
+    const state = GameEngine.createGame({ playerNames, ...(settings || {}) });
 
     // Override generated player IDs with the ones from the room
     const newPlayers = state.players.map((p, i) => ({

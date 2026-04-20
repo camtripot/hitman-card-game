@@ -21,6 +21,7 @@ export enum CardCategory {
   INSTANT = 'instant',
   LOSING = 'losing',
   SAVING = 'saving',
+  PEEK = 'peek',   // Jouable pendant son tour, ne finit PAS le tour
 }
 
 export interface Card {
@@ -30,7 +31,7 @@ export interface Card {
 }
 
 export const CARD_CATEGORIES: Record<CardType, CardCategory> = {
-  [CardType.VOYANTE]: CardCategory.TURN_ENDING,
+  [CardType.VOYANTE]: CardCategory.PEEK,
   [CardType.FUITE]: CardCategory.TURN_ENDING,
   [CardType.CHANGEMENT_DE_SENS]: CardCategory.TURN_ENDING,
   [CardType.BOMBE]: CardCategory.TURN_ENDING,
@@ -54,7 +55,7 @@ export const CARD_EMOJIS: Record<CardType, string> = {
   [CardType.BOMBE]: '\u{1F4A3}',
   [CardType.VOLEUR]: '\u{1F9B9}',
   [CardType.DE_VRAI]: '\u{1F3B2}',
-  [CardType.DE_FAUX]: '\u{1F3AD}',
+  [CardType.DE_FAUX]: '\u{1F3B2}',   // Même emoji que DE_VRAI pour les autres joueurs
   [CardType.DERNIERE_PIOCHE]: '\u{1F4E5}',
   [CardType.MIROIR]: '\u{1FA9E}',
   [CardType.RENVOIE]: '\u21A9\uFE0F',
@@ -71,8 +72,8 @@ export const CARD_NAMES: Record<CardType, string> = {
   [CardType.CHANGEMENT_DE_SENS]: 'Changement de Sens',
   [CardType.BOMBE]: 'Bombe',
   [CardType.VOLEUR]: 'Voleur',
-  [CardType.DE_VRAI]: 'De (Vrai)',
-  [CardType.DE_FAUX]: 'De (Faux)',
+  [CardType.DE_VRAI]: 'De',
+  [CardType.DE_FAUX]: 'De',   // Affiché identique au De Vrai pour les non-propriétaires
   [CardType.DERNIERE_PIOCHE]: 'Derniere Pioche',
   [CardType.MIROIR]: 'Miroir',
   [CardType.RENVOIE]: 'Renvoie',

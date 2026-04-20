@@ -9,7 +9,7 @@ interface GameContextValue {
   myPlayerId: string;
   validActions: PlayerAction[];
   dispatch: (action: PlayerAction) => void;
-  startLocalGame: (playerNames: string[]) => void;
+  startLocalGame: (playerNames: string[], settings?: { startWithAnge: boolean; deadCardsReturnToPile: boolean }) => void;
   isMyTurn: boolean;
   mode: 'local' | 'online';
 }
@@ -20,9 +20,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const managerRef = useRef<LocalGameManager | null>(null);
 
-  const startLocalGame = useCallback((playerNames: string[]) => {
+  const startLocalGame = useCallback((playerNames: string[], settings?: { startWithAnge: boolean; deadCardsReturnToPile: boolean }) => {
     const manager = new LocalGameManager();
-    manager.initialize(playerNames);
+    manager.initialize(playerNames, settings);
     managerRef.current = manager;
     setGameState(manager.getState());
 

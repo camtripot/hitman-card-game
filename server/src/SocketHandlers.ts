@@ -81,7 +81,12 @@ export function setupSocketHandlers(io: Server): void {
     });
 
     // --- START GAME ---
-    socket.on('start_game', (callback) => {
+    socket.on('start_game', (data: any, callback: any) => {
+      // Handle both (callback) and (data, callback) signatures
+      if (typeof data === 'function') {
+        callback = data;
+        data = {};
+      }
       const found = roomManager.getPlayerBySocket(socket.id);
       if (!found) {
         callback({ success: false, error: 'Salon introuvable' });
@@ -105,7 +110,8 @@ export function setupSocketHandlers(io: Server): void {
       const engine = new ServerGameEngine();
       const playerNames = room.players.map(p => p.name);
       const playerIds = room.players.map(p => p.id);
-      engine.startGame(playerNames, playerIds);
+      const settings = data?.settings;
+      engine.startGame(playerNames, playerIds, settings);
 
       // When state changes, broadcast to all players
       engine.setOnStateChange((_state) => {

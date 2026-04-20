@@ -132,14 +132,14 @@ export class OnlineGameManager {
     });
   }
 
-  async startGame(): Promise<void> {
+  async startGame(settings?: { startWithAnge: boolean; deadCardsReturnToPile: boolean }): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.socket) {
         reject('Not connected');
         return;
       }
 
-      this.socket.emit('start_game', (response: any) => {
+      this.socket.emit('start_game', { settings }, (response: any) => {
         if (response.success) {
           resolve();
         } else {

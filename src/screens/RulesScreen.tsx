@@ -17,6 +17,7 @@ const CATEGORY_LABELS: Record<CardCategory, string> = {
   [CardCategory.INSTANT]: 'Instantanee',
   [CardCategory.LOSING]: 'Perdante',
   [CardCategory.SAVING]: 'Sauvetage',
+  [CardCategory.PEEK]: 'Observation',
 };
 
 const CATEGORY_COLORS: Record<CardCategory, string> = {
@@ -24,6 +25,7 @@ const CATEGORY_COLORS: Record<CardCategory, string> = {
   [CardCategory.INSTANT]: '#f39c12',
   [CardCategory.LOSING]: '#e74c3c',
   [CardCategory.SAVING]: '#3498db',
+  [CardCategory.PEEK]: '#8e44ad',
 };
 
 const CARD_DESCRIPTIONS: Record<CardType, string> = {

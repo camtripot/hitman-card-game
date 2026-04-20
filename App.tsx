@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GameProvider } from './src/context/GameContext';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { LocalSetupScreen } from './src/screens/LocalSetupScreen';
 import { GameScreen } from './src/screens/GameScreen';
 import { LobbyScreen } from './src/screens/LobbyScreen';
 import { OnlineGameScreen } from './src/screens/OnlineGameScreen';
@@ -8,8 +9,9 @@ import { RulesScreen } from './src/screens/RulesScreen';
 
 type Screen =
   | { name: 'Home' }
+  | { name: 'LocalSetup' }
   | { name: 'Game'; params: { playerNames: string[]; mode: string } }
-  | { name: 'Lobby' }
+  | { name: 'Lobby'; params?: { settings?: any } }
   | { name: 'OnlineGame'; params: { manager: any } }
   | { name: 'Rules' };
 
@@ -27,6 +29,9 @@ export default function App() {
       {screen.name === 'Home' && (
         <HomeScreen navigation={navigation} />
       )}
+      {screen.name === 'LocalSetup' && (
+        <LocalSetupScreen navigation={navigation} />
+      )}
       {screen.name === 'Game' && (
         <GameScreen
           route={{ params: (screen as any).params }}
@@ -34,7 +39,10 @@ export default function App() {
         />
       )}
       {screen.name === 'Lobby' && (
-        <LobbyScreen navigation={navigation} />
+        <LobbyScreen
+          route={{ params: (screen as any).params }}
+          navigation={navigation}
+        />
       )}
       {screen.name === 'OnlineGame' && (
         <OnlineGameScreen

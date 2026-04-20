@@ -21,7 +21,8 @@ export class GameEngine {
     const fullConfig = { ...DEFAULT_CONFIG, ...config };
     const { playerNames, cardsPerPlayer } = fullConfig;
 
-    let deck = createDeck();
+    const hitmanCount = playerNames.length - 1;
+    let deck = createDeck(hitmanCount);
     const players: Player[] = [];
 
     for (const name of playerNames) {
@@ -40,6 +41,17 @@ export class GameEngine {
         }
       }
       deck = remaining;
+
+      // If startWithAnge is enabled, give each player a free extra Ange card
+      if (fullConfig.startWithAnge) {
+        const extraAnge: Card = {
+          id: `ange-extra-${generateId()}`,
+          type: CardType.ANGE,
+          category: CARD_CATEGORIES[CardType.ANGE],
+        };
+        hand.push(extraAnge);
+      }
+
       players.push({
         id: generateId(),
         name,
@@ -67,6 +79,7 @@ export class GameEngine {
       voyanteCards: [],
       lastPlayedCardType: null,
       eliminatedPlayerId: null,
+      config: fullConfig,
     };
   }
 
@@ -107,10 +120,10 @@ export class GameEngine {
           actions.push({ type: 'DRAW_CARD', playerId });
         }
 
-        // Can play turn-ending cards
+        // Can play turn-ending cards AND peek cards (voyante)
         for (const card of player.hand) {
-          if (CARD_CATEGORIES[card.type] === CardCategory.TURN_ENDING) {
-            // Check if card is chained
+          const cat = CARD_CATEGORIES[card.type];
+          if (cat === CardCategory.TURN_ENDING || cat === CardCategory.PEEK) {
             const isChained = state.chainedCards.some(c => c.cardType === card.type);
             if (!isChained) {
               actions.push({ type: 'PLAY_CARD', playerId, cardInstanceId: card.id });
@@ -257,7 +270,8 @@ export class GameEngine {
     }
 
     const card = currentPlayer.hand.find(c => c.id === cardInstanceId);
-    if (!card || CARD_CATEGORIES[card.type] !== CardCategory.TURN_ENDING) return state;
+    const cardCat = card ? CARD_CATEGORIES[card.type] : null;
+    if (!card || (cardCat !== CardCategory.TURN_ENDING && cardCat !== CardCategory.PEEK)) return state;
 
     // Check if card is chained
     if (state.chainedCards.some(c => c.cardType === card.type)) return state;
@@ -289,12 +303,22 @@ export class GameEngine {
       },
     };
 
-    // If the card needs a target, go to target selection
+    // PEEK cards (Voyante) : pas de fenêtre de réaction, directement l'effet
+    if (cardCat === CardCategory.PEEK) {
+      const handler = getEffectHandler(card.type);
+      if (handler) {
+        const result = handler(newState, effect);
+        return { ...result.state, effectStack: [], phase: result.nextPhase ?? GamePhase.WAITING_FOR_TURN_ACTION };
+      }
+      return { ...newState, effectStack: [], phase: GamePhase.WAITING_FOR_TURN_ACTION };
+    }
+
+    // Si la carte nécessite une cible, aller à la sélection de cible
     if (needsTarget(card.type)) {
       return { ...newState, phase: GamePhase.AWAITING_TARGET };
     }
 
-    // Open reaction window
+    // Ouvrir fenêtre de réaction
     return GameEngine.openReactionWindow(newState, effect);
   }
 
@@ -445,11 +469,13 @@ export class GameEngine {
     const currentPlayer = state.players[state.currentPlayerIndex];
     if (currentPlayer.id !== playerId) return state;
 
-    const newState: GameState = {
+    // Voyante est PEEK : on revient en WAITING_FOR_TURN_ACTION sans avancer le tour
+    return {
       ...state,
       voyanteCards: [],
+      effectStack: [],
+      phase: GamePhase.WAITING_FOR_TURN_ACTION,
     };
-    return GameEngine.advanceTurn(newState);
   }
 
   // --- Utility methods ---
@@ -584,12 +610,19 @@ export class GameEngine {
       };
     }
 
-    // Put eliminated player's cards back in draw pile
+    // Handle eliminated player's cards based on config
     const eliminated = state.players.find(p => p.id === state.eliminatedPlayerId);
     let newDrawPile = state.drawPile;
+    let newDiscardPile = state.discardPile;
     let newPlayers = state.players;
     if (eliminated && eliminated.hand.length > 0) {
-      newDrawPile = shuffle([...state.drawPile, ...eliminated.hand]);
+      if (state.config.deadCardsReturnToPile) {
+        // Cards go back into draw pile (shuffled)
+        newDrawPile = shuffle([...state.drawPile, ...eliminated.hand]);
+      } else {
+        // Cards go to discard pile
+        newDiscardPile = [...state.discardPile, ...eliminated.hand];
+      }
       newPlayers = state.players.map(p =>
         p.id === eliminated.id ? { ...p, hand: [] } : p
       );
@@ -599,6 +632,7 @@ export class GameEngine {
       ...state,
       players: newPlayers,
       drawPile: newDrawPile,
+      discardPile: newDiscardPile,
     };
 
     return GameEngine.advanceTurn(advancedState);

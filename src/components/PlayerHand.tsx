@@ -8,9 +8,11 @@ interface PlayerHandProps {
   playableCardIds: string[];
   onPlayCard: (cardId: string) => void;
   hidden?: boolean;
+  /** false = mode spectateur : De Faux affiché comme De Vrai */
+  isOwnedByViewer?: boolean;
 }
 
-export function PlayerHand({ cards, playableCardIds, onPlayCard, hidden }: PlayerHandProps) {
+export function PlayerHand({ cards, playableCardIds, onPlayCard, hidden, isOwnedByViewer = true }: PlayerHandProps) {
   if (hidden) {
     return (
       <View style={styles.container}>
@@ -29,6 +31,7 @@ export function PlayerHand({ cards, playableCardIds, onPlayCard, hidden }: Playe
             card={card}
             onPress={() => onPlayCard(card.id)}
             disabled={!playableCardIds.includes(card.id)}
+            isOwnedByViewer={isOwnedByViewer}
           />
         ))}
       </ScrollView>
