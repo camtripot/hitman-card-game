@@ -65,13 +65,23 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
 
   // ── Carte avec illustration ──
   if (cardImage) {
+    // Dimensions exactes de la carte selon le mode small/normal
+    const w = small ? 70 : 95;
+    const h = small ? 105 : 140;
+    const radius = small ? 9 : 12;
+
     return (
       <Pressable
         style={[
-          styles.card,
-          { padding: 0, backgroundColor: '#000' },
+          {
+            width: w,
+            height: h,
+            borderRadius: radius,
+            marginHorizontal: small ? 3 : 4,
+            overflow: 'hidden',
+            cursor: 'pointer' as any,
+          },
           isPlayable ? styles.playableImage : styles.disabled,
-          small ? styles.small : null,
         ]}
         onPress={onPress}
         disabled={disabled}
@@ -79,10 +89,10 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
         <ImageBackground
           source={cardImage}
           resizeMode="cover"
-          style={styles.cardImageBg}
+          style={{ width: w, height: h }}
         >
           {/* Lueur blanche quand jouable */}
-          {isPlayable && <View style={styles.playableGlow} />}
+          {isPlayable && <View style={[styles.playableGlow, { borderRadius: radius }]} />}
 
           {/* Badge "FAUX" par-dessus l'image */}
           {showFauxBadge && (
@@ -179,12 +189,6 @@ const styles = StyleSheet.create({
   },
 
   // Styles pour cartes avec illustration
-  cardImageBg: {
-    flex: 1,
-    width: '100%' as any,
-    overflow: 'hidden' as any,
-    borderRadius: 10,
-  },
   playableImage: {
     borderWidth: 2.5,
     borderColor: 'rgba(255,255,255,0.7)',
