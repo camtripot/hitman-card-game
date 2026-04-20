@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, View, Image } from 'react-native';
+import { Pressable, Text, StyleSheet, View, ImageBackground } from 'react-native';
 import { Card, CardCategory, CardType, CARD_NAMES, CARD_EMOJIS } from '../models/Card';
 import { getCardImage } from '../models/CardImages';
 
@@ -69,28 +69,28 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
       <Pressable
         style={[
           styles.card,
-          styles.cardImage,
+          { padding: 0, backgroundColor: '#000' },
           isPlayable ? styles.playableImage : styles.disabled,
           small ? styles.small : null,
         ]}
         onPress={onPress}
         disabled={disabled}
       >
-        <Image
+        <ImageBackground
           source={cardImage}
-          style={StyleSheet.absoluteFill}
           resizeMode="cover"
-        />
+          style={styles.cardImageBg}
+        >
+          {/* Lueur blanche quand jouable */}
+          {isPlayable && <View style={styles.playableGlow} />}
 
-        {/* Lueur verte quand jouable */}
-        {isPlayable && <View style={styles.playableGlow} />}
-
-        {/* Badge "FAUX" par-dessus l'image */}
-        {showFauxBadge && (
-          <View style={styles.fauxBadge}>
-            <Text style={styles.fauxBadgeText}>FAUX</Text>
-          </View>
-        )}
+          {/* Badge "FAUX" par-dessus l'image */}
+          {showFauxBadge && (
+            <View style={styles.fauxBadge}>
+              <Text style={styles.fauxBadgeText}>FAUX</Text>
+            </View>
+          )}
+        </ImageBackground>
       </Pressable>
     );
   }
@@ -179,10 +179,11 @@ const styles = StyleSheet.create({
   },
 
   // Styles pour cartes avec illustration
-  cardImage: {
-    backgroundColor: '#000',
-    borderWidth: 0,
-    padding: 0,
+  cardImageBg: {
+    flex: 1,
+    width: '100%' as any,
+    overflow: 'hidden' as any,
+    borderRadius: 10,
   },
   playableImage: {
     borderWidth: 2.5,
@@ -192,7 +193,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   playableGlow: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.25)',
