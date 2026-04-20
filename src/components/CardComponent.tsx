@@ -65,7 +65,6 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
 
   // ── Carte avec illustration ──
   if (cardImage) {
-    // Dimensions exactes de la carte selon le mode small/normal
     const w = small ? 70 : 95;
     const h = small ? 105 : 140;
     const radius = small ? 9 : 12;
@@ -90,9 +89,12 @@ export function CardComponent({ card, onPress, disabled, small, faceDown, isOwne
           source={cardImage}
           resizeMode="cover"
           style={{ width: w, height: h }}
+          imageStyle={{ borderRadius: radius }}
         >
-          {/* Lueur blanche quand jouable */}
-          {isPlayable && <View style={[styles.playableGlow, { borderRadius: radius }]} />}
+          {/* Overlay lumineux quand jouable */}
+          {isPlayable && (
+            <View style={[styles.playableOverlay, { borderRadius: radius }]} />
+          )}
 
           {/* Badge "FAUX" par-dessus l'image */}
           {showFauxBadge && (
@@ -190,21 +192,21 @@ const styles = StyleSheet.create({
 
   // Styles pour cartes avec illustration
   playableImage: {
-    borderWidth: 2.5,
-    borderColor: 'rgba(255,255,255,0.7)',
-    shadowColor: '#fff',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#ffffff',
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 24,
   },
-  playableGlow: {
+  playableOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     pointerEvents: 'none' as any,
   },
   innerGlow: {

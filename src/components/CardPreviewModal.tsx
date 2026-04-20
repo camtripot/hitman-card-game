@@ -6,9 +6,11 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  ImageBackground,
 } from 'react-native';
 import { Card, CardType, CARD_EMOJIS, CARD_NAMES, CARD_CATEGORIES, CardCategory } from '../models/Card';
 import { CARD_DESCRIPTIONS } from '../models/CardDescriptions';
+import { getCardImage } from '../models/CardImages';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -71,6 +73,7 @@ export function CardPreviewModal({
   const categoryLabel = CATEGORY_LABELS[category];
   const description = CARD_DESCRIPTIONS[displayType];
   const showFauxBadge = isOwnedByViewer && card.type === CardType.DE_FAUX;
+  const cardImage = getCardImage(displayType);
 
   return (
     <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
@@ -80,22 +83,53 @@ export function CardPreviewModal({
       <Animated.View style={[styles.panel, { transform: [{ translateY: slideAnim }] }]}>
         {/* ── LEFT: large card ── */}
         <Pressable
-          style={[styles.bigCard, { backgroundColor: bgColor, borderColor: lighten(bgColor) }]}
+          style={[
+            styles.bigCard,
+            cardImage
+              ? { backgroundColor: '#000', borderWidth: 0, padding: 0 }
+              : { backgroundColor: bgColor, borderColor: lighten(bgColor) },
+          ]}
           onPress={canPlay ? onPlay : undefined}
           disabled={!canPlay}
         >
-          {/* inner border glow */}
-          <View style={[styles.bigCardInner, { borderColor: 'rgba(255,255,255,0.18)' }]} />
-          <Text style={styles.bigEmoji}>{emoji}</Text>
-          {showFauxBadge && (
-            <View style={styles.fauxBadge}>
-              <Text style={styles.fauxBadgeText}>FAUX</Text>
-            </View>
-          )}
-          {canPlay && (
-            <View style={styles.tapToPlayHint}>
-              <Text style={styles.tapToPlayText}>Appuie pour jouer</Text>
-            </View>
+          {cardImage ? (
+            /* ── Version illustrée ── */
+            <ImageBackground
+              source={cardImage}
+              resizeMode="cover"
+              style={styles.bigCardImage}
+              imageStyle={{ borderRadius: 14 }}
+            >
+              {canPlay && (
+                <View style={styles.bigCardPlayOverlay} />
+              )}
+              {showFauxBadge && (
+                <View style={styles.fauxBadge}>
+                  <Text style={styles.fauxBadgeText}>FAUX</Text>
+                </View>
+              )}
+              {canPlay && (
+                <View style={styles.tapToPlayHint}>
+                  <Text style={styles.tapToPlayText}>Appuie pour jouer</Text>
+                </View>
+              )}
+            </ImageBackground>
+          ) : (
+            /* ── Version emoji (fallback) ── */
+            <>
+              <View style={[styles.bigCardInner, { borderColor: 'rgba(255,255,255,0.18)' }]} />
+              <Text style={styles.bigEmoji}>{emoji}</Text>
+              {showFauxBadge && (
+                <View style={styles.fauxBadge}>
+                  <Text style={styles.fauxBadgeText}>FAUX</Text>
+                </View>
+              )}
+              {canPlay && (
+                <View style={styles.tapToPlayHint}>
+                  <Text style={styles.tapToPlayText}>Appuie pour jouer</Text>
+                </View>
+              )}
+            </>
           )}
         </Pressable>
 
@@ -165,6 +199,24 @@ const styles = StyleSheet.create({
     elevation: 12,
     flexShrink: 0,
     cursor: 'pointer' as any,
+  },
+  bigCardImage: {
+    width: 130,
+    height: 190,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  bigCardPlayOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 14,
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.8)',
+    pointerEvents: 'none' as any,
   },
   bigCardInner: {
     position: 'absolute',
