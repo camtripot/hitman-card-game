@@ -62,17 +62,15 @@ export class OnlineGameManager {
   private errorListeners: Set<ErrorListener> = new Set();
 
   /** Attend que le socket soit connecté (max timeoutMs ms) */
-  waitForConnection(timeoutMs = 50000): Promise<void> {
+  waitForConnection(timeoutMs = 60000): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.socket?.connected) { resolve(); return; }
       const timer = setTimeout(() => {
-        reject('Serveur injoignable. Render peut mettre jusqu\'à 60s à démarrer.');
+        reject('Serveur injoignable. Réessaie dans quelques secondes (Render peut mettre ~60s à démarrer).');
       }, timeoutMs);
-      this.socket?.once('connect', () => { clearTimeout(timer); resolve(); });
-      this.socket?.once('connect_error', (err) => {
-        clearTimeout(timer);
-        reject('Erreur de connexion : ' + err.message);
-      });
+      // On écoute seulement "connect" — on laisse socket.io gérer les retries/fallbacks
+      const onConnect = () => { clearTimeout(timer); resolve(); };
+      this.socket?.once('connect', onConnect);
     });
   }
 
@@ -80,8 +78,11 @@ export class OnlineGameManager {
     if (this.socket?.connected) return;
 
     this.socket = io(SERVER_URL, {
-      transports: ['websocket', 'polling'],
-      timeout: 50000,
+      // Polling d'abord : plus fiable sur Render, puis upgrade vers WebSocket
+      transports: ['polling', 'websocket'],
+      timeout: 20000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
     });
 
     this.socket.on('connect', () => {
