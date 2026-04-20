@@ -16,8 +16,10 @@ import { ChainIndicator } from '../components/ChainIndicator';
 import { EventLog } from '../components/EventLog';
 import { CardPreviewModal } from '../components/CardPreviewModal';
 import { HitmanPlacerOverlay } from '../components/HitmanPlacerOverlay';
+import { DrawnCardOverlay } from '../components/DrawnCardOverlay';
 import { ResultsScreen } from './ResultsScreen';
 import { isInstant } from '../engine/CardEffects';
+import { CARD_CATEGORIES } from '../models/Card';
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get('window');
 
@@ -37,6 +39,13 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   const [gameState, setGameState] = useState<OnlineGameState | null>(manager.getGameState());
   const [previewCard, setPreviewCard] = useState<Card | null>(null);
 
+  // Overlay carte piochée
+  const [drawnCard, setDrawnCard] = useState<Card | null>(null);
+  const [drawnCardEvent, setDrawnCardEvent] = useState<'draw' | 'hitman_kill' | 'ange_save'>('draw');
+  const [drawnByPlayer, setDrawnByPlayer] = useState('');
+  const prevHandRef = useRef<Card[]>([]);
+  const lastShownEventKeyRef = useRef('');
+
   // Animation carte jouée
   const flyAnim = useRef(new Animated.Value(0)).current;
   const [flyingCard, setFlyingCard] = useState<Card | null>(null);
@@ -50,6 +59,48 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
       manager.disconnect();
     };
   }, [manager]);
+
+  // Détection des événements de pioche pour afficher l'overlay
+  useEffect(() => {
+    if (!gameState) return;
+    const event = gameState.lastEvent;
+    const myPlayer = gameState.players.find(p => p.id === myPlayerId);
+    const currentHand: Card[] = myPlayer?.hand || [];
+
+    if (event && event.playerId === myPlayerId &&
+        ['draw', 'hitman_kill', 'ange_save'].includes(event.type)) {
+      const eventKey = `${event.type}-${gameState.turnCount}-${event.playerId}`;
+      if (eventKey !== lastShownEventKeyRef.current) {
+        lastShownEventKeyRef.current = eventKey;
+        const playerName = myPlayer?.name || '';
+
+        if (event.type === 'draw') {
+          // Trouver la carte qui vient d'apparaître dans la main
+          const newCard = currentHand.find(
+            c => !prevHandRef.current.some(p => p.id === c.id)
+          );
+          if (newCard) {
+            setDrawnCard(newCard);
+            setDrawnCardEvent('draw');
+            setDrawnByPlayer(playerName);
+          }
+        } else {
+          // hitman_kill ou ange_save : afficher la carte Hitman
+          const hitmanCard: Card = {
+            id: 'hitman-display',
+            type: CardType.HITMAN,
+            category: CARD_CATEGORIES[CardType.HITMAN],
+          };
+          setDrawnCard(hitmanCard);
+          setDrawnCardEvent(event.type as 'hitman_kill' | 'ange_save');
+          setDrawnByPlayer(playerName);
+        }
+      }
+    }
+
+    // Mettre à jour la main précédente APRÈS comparaison
+    prevHandRef.current = currentHand;
+  }, [gameState]);
 
   const myPlayerId = manager.getPlayerId();
 
@@ -139,6 +190,20 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   const myPlayer = gameState.players.find(p => p.id === myPlayerId);
   const myHand: Card[] = myPlayer?.hand || [];
   const isMyTurn = currentPlayer?.id === myPlayerId;
+
+  // Overlay carte piochée (seulement pour le joueur qui vient de piocher)
+  if (drawnCard) {
+    return (
+      <View style={styles.container}>
+        <DrawnCardOverlay
+          card={drawnCard}
+          eventType={drawnCardEvent}
+          playerName={drawnByPlayer}
+          onDismiss={() => setDrawnCard(null)}
+        />
+      </View>
+    );
+  }
 
   // Choix de la position du Hitman (après sauvegarde par Ange)
   if (gameState.phase === GamePhase.CHOOSING_HITMAN_POSITION && isMyTurn) {
