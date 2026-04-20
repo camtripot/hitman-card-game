@@ -73,7 +73,7 @@ export function DrawnCardOverlay({ card, eventType, playerName, onDismiss }: Dra
         transform: [{ scale: scaleAnim }, { translateX: shakeAnim }],
         marginVertical: 24,
       }}>
-        <CardComponent card={card} disabled />
+        <CardComponent card={card} />
       </Animated.View>
 
       {eventType === 'ange_save' && (
