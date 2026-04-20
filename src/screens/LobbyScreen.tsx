@@ -24,6 +24,7 @@ export function LobbyScreen({ route, navigation }: LobbyScreenProps) {
   const [isHost, setIsHost] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('');
   const [settings, setSettings] = useState<GameSettingsData>(
     route?.params?.settings ?? { startWithAnge: false, deadCardsReturnToPile: true }
   );
@@ -41,31 +42,44 @@ export function LobbyScreen({ route, navigation }: LobbyScreenProps) {
   const handleCreate = async () => {
     if (!playerName.trim()) { setError('Entre ton nom'); return; }
     setError(''); setLoading(true);
+    setLoadingMsg('Connexion au serveur…');
+    // Avertissement après 5s que Render peut être en train de démarrer
+    const warnTimer = setTimeout(() => {
+      setLoadingMsg('⏳ Le serveur se réveille (jusqu\'à 60s la première fois)…');
+    }, 5000);
     try {
       const manager = managerRef.current!;
       const { roomCode: code } = await manager.createRoom(playerName.trim());
+      clearTimeout(warnTimer);
       setMyRoomCode(code);
       setIsHost(true);
       manager.onStateChange(() => navigation.navigate('OnlineGame', { manager }));
     } catch (err: any) {
-      setError(typeof err === 'string' ? err : 'Erreur de connexion');
+      clearTimeout(warnTimer);
+      setError(typeof err === 'string' ? err : 'Erreur de connexion au serveur');
     }
-    setLoading(false);
+    setLoading(false); setLoadingMsg('');
   };
 
   const handleJoin = async () => {
     if (!playerName.trim() || !roomCode.trim()) { setError('Entre ton nom et le code'); return; }
     setError(''); setLoading(true);
+    setLoadingMsg('Connexion au serveur…');
+    const warnTimer = setTimeout(() => {
+      setLoadingMsg('⏳ Le serveur se réveille (jusqu\'à 60s la première fois)…');
+    }, 5000);
     try {
       const manager = managerRef.current!;
       await manager.joinRoom(roomCode.trim().toUpperCase(), playerName.trim());
+      clearTimeout(warnTimer);
       setMyRoomCode(roomCode.trim().toUpperCase());
       setIsHost(false);
       manager.onStateChange(() => navigation.navigate('OnlineGame', { manager }));
     } catch (err: any) {
+      clearTimeout(warnTimer);
       setError(typeof err === 'string' ? err : 'Salon introuvable');
     }
-    setLoading(false);
+    setLoading(false); setLoadingMsg('');
   };
 
   const handleStartGame = async () => {
@@ -217,7 +231,7 @@ export function LobbyScreen({ route, navigation }: LobbyScreenProps) {
             disabled={loading}
           >
             <Text style={styles.actionBtnText}>
-              {loading ? 'Connexion…' : tab === 'create' ? '🌐 Créer le salon' : '🚀 Rejoindre'}
+              {loading ? (loadingMsg || 'Connexion…') : tab === 'create' ? '🌐 Créer le salon' : '🚀 Rejoindre'}
             </Text>
           </Pressable>
 

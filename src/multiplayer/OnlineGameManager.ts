@@ -61,11 +61,27 @@ export class OnlineGameManager {
   private roomListeners: Set<RoomListener> = new Set();
   private errorListeners: Set<ErrorListener> = new Set();
 
+  /** Attend que le socket soit connecté (max timeoutMs ms) */
+  waitForConnection(timeoutMs = 50000): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.socket?.connected) { resolve(); return; }
+      const timer = setTimeout(() => {
+        reject('Serveur injoignable. Render peut mettre jusqu\'à 60s à démarrer.');
+      }, timeoutMs);
+      this.socket?.once('connect', () => { clearTimeout(timer); resolve(); });
+      this.socket?.once('connect_error', (err) => {
+        clearTimeout(timer);
+        reject('Erreur de connexion : ' + err.message);
+      });
+    });
+  }
+
   connect(): void {
     if (this.socket?.connected) return;
 
     this.socket = io(SERVER_URL, {
       transports: ['websocket', 'polling'],
+      timeout: 50000,
     });
 
     this.socket.on('connect', () => {
@@ -95,13 +111,12 @@ export class OnlineGameManager {
   }
 
   async createRoom(playerName: string): Promise<{ roomCode: string; playerId: string }> {
+    await this.waitForConnection();
     return new Promise((resolve, reject) => {
-      if (!this.socket) {
-        reject('Not connected');
-        return;
-      }
-
+      if (!this.socket) { reject('Non connecté'); return; }
+      const timer = setTimeout(() => reject('Pas de réponse du serveur'), 15000);
       this.socket.emit('create_room', { playerName }, (response: any) => {
+        clearTimeout(timer);
         if (response.success) {
           this.playerId = response.playerId;
           this.roomCode = response.roomCode;
@@ -114,13 +129,12 @@ export class OnlineGameManager {
   }
 
   async joinRoom(roomCode: string, playerName: string): Promise<{ playerId: string }> {
+    await this.waitForConnection();
     return new Promise((resolve, reject) => {
-      if (!this.socket) {
-        reject('Not connected');
-        return;
-      }
-
+      if (!this.socket) { reject('Non connecté'); return; }
+      const timer = setTimeout(() => reject('Pas de réponse du serveur'), 15000);
       this.socket.emit('join_room', { roomCode, playerName }, (response: any) => {
+        clearTimeout(timer);
         if (response.success) {
           this.playerId = response.playerId;
           this.roomCode = response.roomCode;
