@@ -1,7 +1,25 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View, Text } from 'react-native';
-import { Card } from '../models/Card';
+import { Card, CardCategory } from '../models/Card';
 import { CardComponent } from './CardComponent';
+
+// Ordre d'affichage : Ange → Fin de tour → Ne finit pas le tour → Instantanée → Perdante
+const CATEGORY_ORDER: Record<CardCategory, number> = {
+  [CardCategory.SAVING]: 0,
+  [CardCategory.TURN_ENDING]: 1,
+  [CardCategory.PEEK]: 2,
+  [CardCategory.INSTANT]: 3,
+  [CardCategory.LOSING]: 4,
+};
+
+function sortHand(cards: Card[]): Card[] {
+  return [...cards].sort((a, b) => {
+    const catDiff = CATEGORY_ORDER[a.category] - CATEGORY_ORDER[b.category];
+    if (catDiff !== 0) return catDiff;
+    // Même catégorie → regrouper les cartes identiques
+    return a.type.localeCompare(b.type);
+  });
+}
 
 interface PlayerHandProps {
   cards: Card[];
@@ -21,11 +39,13 @@ export function PlayerHand({ cards, playableCardIds, onPlayCard, hidden, isOwned
     );
   }
 
+  const sorted = sortHand(cards);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Ta main</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        {cards.map(card => (
+        {sorted.map(card => (
           <CardComponent
             key={card.id}
             card={card}

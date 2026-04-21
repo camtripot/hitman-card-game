@@ -152,9 +152,9 @@ export class GameEngine {
         if (!state.reactionWindow.eligiblePlayerIds.includes(playerId)) break;
         if (state.reactionWindow.passedPlayerIds.includes(playerId)) break;
 
-        // Can play instant cards
+        // Can play instant cards (Miroir is turn-only, not usable as reaction)
         for (const card of player.hand) {
-          if (isInstant(card.type)) {
+          if (isInstant(card.type) && card.type !== CardType.MIROIR) {
             const isChained = state.chainedCards.some(c => c.cardType === card.type);
             if (!isChained) {
               actions.push({ type: 'REACT_WITH_CARD', playerId, cardInstanceId: card.id });
@@ -515,7 +515,8 @@ export class GameEngine {
 
     const player = state.players.find(p => p.id === playerId)!;
     const card = player.hand.find(c => c.id === cardInstanceId);
-    if (!card || !isInstant(card.type)) return state;
+    // Miroir est uniquement jouable pendant son propre tour, pas en réaction
+    if (!card || !isInstant(card.type) || card.type === CardType.MIROIR) return state;
 
     // Check if chained
     if (state.chainedCards.some(c => c.cardType === card.type)) return state;

@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, StatusBar, Animated, Pressable, Dimensions, ScrollView,
 } from 'react-native';
 import { GamePhase } from '../models/GameState';
-import { Card, CardType, CARD_CATEGORIES } from '../models/Card';
+import { Card, CardType } from '../models/Card';
 import { useGame } from '../context/GameContext';
 import { PokerTable } from '../components/PokerTable';
 import { PlayerHand } from '../components/PlayerHand';
@@ -38,8 +38,6 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   const [drawnCard, setDrawnCard] = useState<Card | null>(null);
   const [drawnCardEvent, setDrawnCardEvent] = useState<'draw' | 'hitman_kill' | 'ange_save' | 'ange_choice'>('draw');
   const [drawnByPlayer, setDrawnByPlayer] = useState('');
-  const prevHandRef = useRef<Card[]>([]);
-  const lastShownEventKeyRef = useRef('');
 
   // ── Écran élimination ──
   const [showEliminatedScreen, setShowEliminatedScreen] = useState(false);
@@ -81,45 +79,6 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
     setLastPlayerIndex(gameState.currentPlayerIndex);
   }, [gameState?.currentPlayerIndex, gameState?.phase]);
 
-  // Détection des cartes piochées via DERNIERE_PIOCHE (post-dispatch)
-  useEffect(() => {
-    if (!gameState || !myPlayerId) return;
-    const event = gameState.lastEvent;
-    const myPlayer = gameState.players.find(p => p.id === myPlayerId);
-    const currentHand: Card[] = myPlayer?.hand || [];
-
-    if (event && event.playerId === myPlayerId) {
-      const eventKey = `${event.type}-${gameState.turnCount}-${event.playerId}`;
-      if (eventKey !== lastShownEventKeyRef.current) {
-        if (event.type === 'draw' && !drawnCard) {
-          // DERNIERE_PIOCHE normale (DRAW_CARD direct set drawnCard avant dispatch → pas null)
-          const newCard = currentHand.find(
-            c => !prevHandRef.current.some(p => p.id === c.id)
-          );
-          if (newCard) {
-            lastShownEventKeyRef.current = eventKey;
-            setDrawnCard(newCard);
-            setDrawnCardEvent('draw');
-            setDrawnByPlayer(myPlayer?.name || '');
-          }
-        } else if (event.type === 'hitman_kill' && !drawnCard) {
-          // Hitman pioché via DERNIERE_PIOCHE (sans Ange)
-          lastShownEventKeyRef.current = eventKey;
-          const hitmanCard: Card = {
-            id: 'hitman-display',
-            type: CardType.HITMAN,
-            category: CARD_CATEGORIES[CardType.HITMAN],
-          };
-          setDrawnCard(hitmanCard);
-          setDrawnCardEvent('hitman_kill');
-          setDrawnByPlayer(myPlayer?.name || '');
-        }
-      }
-    }
-
-    prevHandRef.current = currentHand;
-  }, [gameState]);
-
   // Déclencher hand reveal une fois l'overlay de pioche fermé
   useEffect(() => {
     if (pendingHandReveal && !drawnCard) {
@@ -129,8 +88,33 @@ export function GameScreen({ route, navigation }: GameScreenProps) {
   }, [pendingHandReveal, drawnCard]);
 
   // Animation jeu de carte : dispatch après l'animation
+  // Pré-détection DERNIERE_PIOCHE : montrer l'overlay avant que le tour avance
   useEffect(() => {
     if (pendingPlayCardId && !flyingCard) {
+      const pendingCard = gameState?.players
+        .find(p => p.id === myPlayerId)?.hand
+        .find(c => c.id === pendingPlayCardId);
+
+      if (pendingCard?.type === CardType.DERNIERE_PIOCHE && gameState && gameState.drawPile.length > 0) {
+        const lastCard = gameState.drawPile[gameState.drawPile.length - 1];
+        const currentP = gameState.players[gameState.currentPlayerIndex];
+        const hasAnge = currentP.hand.some(c => c.type === CardType.ANGE);
+
+        if (lastCard.type === CardType.HITMAN && hasAnge) {
+          setDrawnCard(lastCard);
+          setDrawnCardEvent('ange_save');
+          setDrawnByPlayer(currentP.name);
+        } else if (lastCard.type === CardType.HITMAN) {
+          setDrawnCard(lastCard);
+          setDrawnCardEvent('hitman_kill');
+          setDrawnByPlayer(currentP.name);
+        } else {
+          setDrawnCard(lastCard);
+          setDrawnCardEvent('draw');
+          setDrawnByPlayer(currentP.name);
+        }
+      }
+
       dispatch({ type: 'PLAY_CARD', playerId: myPlayerId, cardInstanceId: pendingPlayCardId });
       setPendingPlayCardId(null);
     }
