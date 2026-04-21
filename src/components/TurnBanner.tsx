@@ -49,10 +49,10 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   myTurnBanner: {
-    backgroundColor: '#1a6b3c',
+    backgroundColor: '#0d2e18',
   },
   waitingBanner: {
-    backgroundColor: '#2a2a4a',
+    backgroundColor: '#100a08',
   },
   row: {
     flexDirection: 'row',

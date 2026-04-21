@@ -137,6 +137,7 @@ registerEffect(CardType.DERNIERE_PIOCHE, (state, effect) => {
   if (lastCard.type === CardType.HITMAN) {
     const hasAnge = player.hand.some(c => c.type === CardType.ANGE);
     if (hasAnge) {
+      // Ange sauve le joueur — il doit choisir où remettre le Hitman
       const angeCard = player.hand.find(c => c.type === CardType.ANGE)!;
       const newHand = player.hand.filter(c => c.id !== angeCard.id);
       const newPlayers = state.players.map(p =>
@@ -146,25 +147,32 @@ registerEffect(CardType.DERNIERE_PIOCHE, (state, effect) => {
         state: {
           ...state,
           drawPile: newDrawPile,
-          discardPile: [...state.discardPile, lastCard, angeCard],
+          discardPile: [...state.discardPile, angeCard],
           players: newPlayers,
+          pendingHitmanCard: lastCard,
           lastEvent: {
             type: 'ange_save',
             playerId: player.id,
             message: `${player.name} a pioché un Hitman mais a été sauvé par un Ange !`,
           },
         },
-        nextPhase: GamePhase.WAITING_FOR_TURN_ACTION,
+        nextPhase: GamePhase.CHOOSING_HITMAN_POSITION,
       };
     } else {
+      // Joueur éliminé — le Hitman repart à une position aléatoire dans la pioche
+      const randomPos = Math.floor(Math.random() * (newDrawPile.length + 1));
+      const newDrawPileWithHitman = [
+        ...newDrawPile.slice(0, randomPos),
+        lastCard,
+        ...newDrawPile.slice(randomPos),
+      ];
       const newPlayers = state.players.map(p =>
         p.id === player.id ? { ...p, isEliminated: true } : p
       );
       return {
         state: {
           ...state,
-          drawPile: newDrawPile,
-          discardPile: [...state.discardPile, lastCard],
+          drawPile: newDrawPileWithHitman,
           players: newPlayers,
           eliminatedPlayerId: player.id,
           lastEvent: {
@@ -178,7 +186,7 @@ registerEffect(CardType.DERNIERE_PIOCHE, (state, effect) => {
     }
   }
 
-  // Normal card: add to hand
+  // Normal card: add to hand (type 'draw' pour déclencher l'overlay)
   const newPlayers = state.players.map(p =>
     p.id === player.id ? { ...p, hand: [...p.hand, lastCard] } : p
   );
@@ -188,7 +196,7 @@ registerEffect(CardType.DERNIERE_PIOCHE, (state, effect) => {
       drawPile: newDrawPile,
       players: newPlayers,
       lastEvent: {
-        type: 'derniere_pioche',
+        type: 'draw',
         playerId: player.id,
         message: `${player.name} a pioché la dernière carte de la pioche`,
       },

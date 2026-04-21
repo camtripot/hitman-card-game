@@ -32,8 +32,8 @@ export function DrawPile({ cardsRemaining, onDraw, canDraw }: DrawPileProps) {
 const PILE_WIDTH = 100;
 const PILE_HEIGHT = 140;
 const PILE_RADIUS = 12;
-const PILE_BG = '#1a1a2e';
-const STACK_BG = '#16213e';
+const PILE_BG = '#080810';
+const STACK_BG = '#0c0c18';
 
 const styles = StyleSheet.create({
   container: {

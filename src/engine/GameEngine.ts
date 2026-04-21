@@ -693,6 +693,8 @@ export class GameEngine {
         return { ...newState, effectStack: result.state.effectStack, phase: GamePhase.AWAITING_CARD_CHOICE };
       case GamePhase.VIEWING_VOYANTE:
         return { ...newState, phase: GamePhase.VIEWING_VOYANTE };
+      case GamePhase.CHOOSING_HITMAN_POSITION:
+        return { ...newState, phase: GamePhase.CHOOSING_HITMAN_POSITION };
       case GamePhase.PLAYER_ELIMINATED:
         return GameEngine.checkElimination(newState);
       default:
