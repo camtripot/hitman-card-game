@@ -6,8 +6,7 @@ import { GamePhase } from '../models/GameState';
 import { CardCategory, Card, CardType } from '../models/Card';
 import { OnlineGameManager, OnlineGameState } from '../multiplayer/OnlineGameManager';
 import { TurnBanner } from '../components/TurnBanner';
-import { PlayerRing } from '../components/PlayerRing';
-import { DrawPile } from '../components/DrawPile';
+import { PokerTable } from '../components/PokerTable';
 import { PlayerHand } from '../components/PlayerHand';
 import { TargetPicker } from '../components/TargetPicker';
 import { ReactionOverlay } from '../components/ReactionOverlay';
@@ -245,7 +244,8 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
     const hasPassed = gameState.reactionWindow.passedPlayerIds.includes(myPlayerId);
     if (isEligible && !hasPassed) {
       for (const card of myHand) {
-        if (isInstant(card.type)) {
+        // Miroir : uniquement jouable pendant son tour, pas en réaction
+        if (isInstant(card.type) && card.type !== CardType.MIROIR) {
           const isChained = gameState.chainedCards.some((c: any) => c.cardType === card.type);
           if (!isChained) reactableCardIds.push(card.id);
         }
@@ -263,19 +263,20 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
   const showVoyante = gameState.phase === GamePhase.VIEWING_VOYANTE &&
     gameState.voyanteCards.length > 0 && isMyTurn;
 
-  // Build player objects compatible with components
-  const playersForRing = gameState.players.map(p => ({
+  // Joueurs pour PokerTable : hand synthétique avec la bonne longueur (cardCount) pour les adversaires
+  const playersForTable = gameState.players.map(p => ({
     id: p.id,
     name: p.name,
-    hand: p.hand || Array(p.cardCount).fill(null),
+    hand: p.hand || (Array(p.cardCount).fill(null) as any[]),
     isEliminated: p.isEliminated,
     isConnected: p.isConnected,
   }));
 
+  // Joueurs pour TargetPicker (sans cartes)
   const playersForTarget = gameState.players.map(p => ({
     id: p.id,
     name: p.name,
-    hand: Array(p.cardCount).fill(null),
+    hand: [] as any[],
     isEliminated: p.isEliminated,
     isConnected: p.isConnected,
   }));
@@ -309,24 +310,20 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
         )}
       </View>
 
-      <PlayerRing
-        players={playersForRing}
+      <PokerTable
+        players={playersForTable as any}
         currentPlayerIndex={gameState.currentPlayerIndex}
         direction={gameState.direction}
+        drawPileCount={gameState.drawPileCount}
+        discardPileCount={gameState.discardPile.length}
+        lastPlayedCardType={gameState.lastPlayedCardType as any}
+        mustPlayCount={gameState.mustPlayCount}
+        onDraw={handleDraw}
+        canDraw={canDraw}
       />
 
-      <View style={styles.gameBody}>
-        <ChainIndicator chainedCards={gameState.chainedCards} />
-        <EventLog event={gameState.lastEvent} />
-
-        <View style={styles.centerArea}>
-          <DrawPile
-            cardsRemaining={gameState.drawPileCount}
-            onDraw={handleDraw}
-            canDraw={canDraw}
-          />
-        </View>
-      </View>
+      <ChainIndicator chainedCards={gameState.chainedCards} />
+      <EventLog event={gameState.lastEvent} />
 
       {/* Main du joueur */}
       {myPlayer && (
@@ -442,17 +439,6 @@ const styles = StyleSheet.create({
   roomCodeText: { color: '#2a2a4a', fontSize: 11, fontWeight: '700', letterSpacing: 2 },
   bombText: { color: '#f39c12', fontSize: 11, fontWeight: 'bold', marginTop: 2 },
   phaseText: { color: '#7f8fa6', fontSize: 11, marginTop: 2 },
-
-  gameBody: {
-    flex: 1,
-    minHeight: 0,
-  },
-  centerArea: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 0,
-  },
 
   handArea: {
     borderTopWidth: 1,

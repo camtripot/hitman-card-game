@@ -36,8 +36,10 @@ export function LobbyScreen({ route, navigation }: LobbyScreenProps) {
     managerRef.current = manager;
     manager.onRoomUpdate((room) => setCurrentRoom(room));
     manager.onError((err) => setError(err));
+    // Synchronisation des paramètres : mise à jour pour tous quand le host change les settings
+    const unsubSettings = manager.onSettingsUpdate((s) => setSettings(s));
     return () => {
-      // Nettoyage : déconnecter le socket si le composant se démonte
+      unsubSettings();
       if (!manager.getRoomCode()) {
         manager.disconnect();
       }
@@ -137,7 +139,14 @@ export function LobbyScreen({ route, navigation }: LobbyScreenProps) {
 
           {/* Paramètres */}
           <Text style={styles.sectionLabel}>PARAMÈTRES</Text>
-          <GameSettings settings={settings} onSettingsChange={setSettings} disabled={!isHost} />
+          <GameSettings
+            settings={settings}
+            onSettingsChange={(newSettings) => {
+              setSettings(newSettings);
+              if (isHost) managerRef.current?.updateSettings(newSettings);
+            }}
+            disabled={!isHost}
+          />
 
           {/* Info Hitmen */}
           <View style={styles.infoBox}>

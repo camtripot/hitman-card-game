@@ -161,6 +161,17 @@ export function setupSocketHandlers(io: Server): void {
       }
     });
 
+    // --- UPDATE SETTINGS (host only) ---
+    socket.on('update_settings', (data: { settings: any }, callback) => {
+      const found = roomManager.getPlayerBySocket(socket.id);
+      if (!found) { callback?.({ success: false }); return; }
+      const { room, player } = found;
+      if (player.id !== room.hostId) { callback?.({ success: false, error: 'Seul le host peut modifier les paramètres' }); return; }
+      // Broadcast the new settings to everyone in the room
+      io.to(room.code).emit('settings_updated', { settings: data.settings });
+      callback?.({ success: true });
+    });
+
     // --- LEAVE ROOM ---
     socket.on('leave_room', () => {
       handleLeave(io, socket);

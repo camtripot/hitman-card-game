@@ -46,6 +46,7 @@ export interface RoomInfo {
 type OnlineListener = (state: OnlineGameState) => void;
 type RoomListener = (room: RoomInfo) => void;
 type ErrorListener = (error: string) => void;
+type SettingsListener = (settings: any) => void;
 
 // Auto-detect: use production URL if not on localhost, otherwise use local dev server
 const SERVER_URL = typeof window !== 'undefined' &&
@@ -62,6 +63,7 @@ export class OnlineGameManager {
   private stateListeners: Set<OnlineListener> = new Set();
   private roomListeners: Set<RoomListener> = new Set();
   private errorListeners: Set<ErrorListener> = new Set();
+  private settingsListeners: Set<SettingsListener> = new Set();
 
   /** Attend que le socket soit connecté (max timeoutMs ms) */
   waitForConnection(timeoutMs = 90000): Promise<void> {
@@ -121,6 +123,10 @@ export class OnlineGameManager {
 
     this.socket.on('room_updated', (room: RoomInfo) => {
       this.roomListeners.forEach(l => l(room));
+    });
+
+    this.socket.on('settings_updated', (data: { settings: any }) => {
+      this.settingsListeners.forEach(l => l(data.settings));
     });
 
     this.socket.on('game_over', (data: { winnerId: string }) => {
@@ -216,6 +222,15 @@ export class OnlineGameManager {
     return () => this.errorListeners.delete(listener);
   }
 
+  onSettingsUpdate(listener: SettingsListener): () => void {
+    this.settingsListeners.add(listener);
+    return () => this.settingsListeners.delete(listener);
+  }
+
+  updateSettings(settings: { startWithAnge: boolean; deadCardsReturnToPile: boolean }): void {
+    this.socket?.emit('update_settings', { settings });
+  }
+
   getPlayerId(): string {
     return this.playerId;
   }
@@ -241,5 +256,6 @@ export class OnlineGameManager {
     this.stateListeners.clear();
     this.roomListeners.clear();
     this.errorListeners.clear();
+    this.settingsListeners.clear();
   }
 }
