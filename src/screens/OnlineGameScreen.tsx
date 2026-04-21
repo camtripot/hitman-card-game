@@ -224,13 +224,12 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
     for (const card of myHand) {
       const isChained = gameState.chainedCards.some((c: any) => c.cardType === card.type);
       if (isChained) continue;
-      // Cartes fin de tour ET PEEK (Voyante, Voleur, Dé Vrai, Dé Faux)
+      // Cartes fin de tour ET PEEK (Voyante, Dé Vrai, Dé Faux)
       if (card.category === CardCategory.TURN_ENDING || card.category === CardCategory.PEEK) {
         playableCardIds.push(card.id);
       }
-      // Miroir, Chaîne, Météorite jouables sur son tour si une carte a été posée
+      // Miroir (COPY), Chaîne, Météorite jouables sur son tour si une carte a déjà été posée
       if (
-        card.category === CardCategory.INSTANT &&
         gameState.lastPlayedCardType !== null &&
         (card.type === CardType.MIROIR || card.type === CardType.CHAINE || card.type === CardType.METEORITE)
       ) {
@@ -244,8 +243,8 @@ export function OnlineGameScreen({ route, navigation }: OnlineGameScreenProps) {
     const hasPassed = gameState.reactionWindow.passedPlayerIds.includes(myPlayerId);
     if (isEligible && !hasPassed) {
       for (const card of myHand) {
-        // Miroir : uniquement jouable pendant son tour, pas en réaction
-        if (isInstant(card.type) && card.type !== CardType.MIROIR) {
+        // Miroir (COPY) n'est pas INSTANT → isInstant retourne false → naturellement exclu
+        if (isInstant(card.type)) {
           const isChained = gameState.chainedCards.some((c: any) => c.cardType === card.type);
           if (!isChained) reactableCardIds.push(card.id);
         }

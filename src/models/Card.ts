@@ -22,6 +22,7 @@ export enum CardCategory {
   LOSING = 'losing',
   SAVING = 'saving',
   PEEK = 'peek',   // Jouable pendant son tour, ne finit PAS le tour
+  COPY = 'copy',   // Copie la dernière carte jouée, uniquement pendant son tour
 }
 
 export interface Card {
@@ -35,11 +36,11 @@ export const CARD_CATEGORIES: Record<CardType, CardCategory> = {
   [CardType.FUITE]: CardCategory.TURN_ENDING,
   [CardType.CHANGEMENT_DE_SENS]: CardCategory.TURN_ENDING,
   [CardType.BOMBE]: CardCategory.TURN_ENDING,
-  [CardType.VOLEUR]: CardCategory.PEEK,
+  [CardType.VOLEUR]: CardCategory.TURN_ENDING,
   [CardType.DE_VRAI]: CardCategory.PEEK,
   [CardType.DE_FAUX]: CardCategory.PEEK,
   [CardType.DERNIERE_PIOCHE]: CardCategory.TURN_ENDING,
-  [CardType.MIROIR]: CardCategory.INSTANT,
+  [CardType.MIROIR]: CardCategory.COPY,
   [CardType.RENVOIE]: CardCategory.INSTANT,
   [CardType.METEORITE]: CardCategory.INSTANT,
   [CardType.CHAINE]: CardCategory.INSTANT,

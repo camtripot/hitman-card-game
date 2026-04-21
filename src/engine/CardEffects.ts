@@ -6,6 +6,8 @@ import { CHAIN_DURATION_TURNS, VOYANTE_CARDS_COUNT } from './rules';
 export interface EffectResult {
   state: GameState;
   nextPhase: GamePhase;
+  /** Si true, l'annulation d'un effet ne fait pas avancer le tour */
+  keepTurn?: boolean;
 }
 
 export type EffectHandler = (
@@ -219,7 +221,7 @@ registerEffect(CardType.STOP, (state, _effect) => {
       message: `L'effet a été annulé par un Stop !`,
     },
   };
-  return { state: newState, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION };
+  return { state: newState, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION, keepTurn: true };
 });
 
 registerEffect(CardType.MIROIR, (state, effect) => {
@@ -287,14 +289,16 @@ registerEffect(CardType.RENVOIE, (state, effect) => {
 });
 
 registerEffect(CardType.METEORITE, (state, _effect) => {
-  if (state.effectStack.length === 0) {
-    return { state, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION };
+  if (state.effectStack.length < 2) {
+    return { state, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION, keepTurn: true };
   }
 
-  // Cancel the top effect
-  const topEffect = state.effectStack[state.effectStack.length - 1];
-  const cancelledCardType = topEffect.cardType;
-  const newStack = state.effectStack.slice(0, -1);
+  // effectStack = [..., cancelledEffect, meteoriteEffect]
+  // The target is the effect BELOW Meteorite (length-2)
+  const targetEffect = state.effectStack[state.effectStack.length - 2];
+  const cancelledCardType = targetEffect.cardType;
+  // Remove both Meteorite and the cancelled effect
+  const newStack = state.effectStack.slice(0, -2);
 
   // Remove all cards of that type from all hands and put them back in draw pile
   const removedCards: typeof state.drawPile = [];
@@ -318,16 +322,21 @@ registerEffect(CardType.METEORITE, (state, _effect) => {
       message: `Météorite ! L'effet est annulé et toutes les cartes ${cancelledCardType} sont retournées dans la pioche !`,
     },
   };
-  return { state: newState, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION };
+  return { state: newState, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION, keepTurn: true };
 });
 
 registerEffect(CardType.CHAINE, (state, _effect) => {
-  if (state.effectStack.length === 0) {
-    return { state, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION };
+  if (state.effectStack.length < 2) {
+    return { state, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION, keepTurn: true };
   }
 
-  const topEffect = state.effectStack[state.effectStack.length - 1];
-  const chainedType = topEffect.cardType;
+  // effectStack = [..., originalCardEffect, chaineEffect]
+  // Block the ORIGINAL card (length-2), not Chaîne itself (length-1)
+  const targetEffect = state.effectStack[state.effectStack.length - 2];
+  const chainedType = targetEffect.cardType;
+
+  // Remove both Chaîne and the original card from the stack
+  const newStack = state.effectStack.slice(0, -2);
 
   // Add chain entry — block this card type for 3 player-turns
   const newChained = [
@@ -337,6 +346,7 @@ registerEffect(CardType.CHAINE, (state, _effect) => {
 
   const newState: GameState = {
     ...state,
+    effectStack: newStack,
     chainedCards: newChained,
     lastEvent: {
       type: 'chaine',
@@ -344,5 +354,5 @@ registerEffect(CardType.CHAINE, (state, _effect) => {
       message: `Les cartes ${chainedType} sont enchaînées pour ${CHAIN_DURATION_TURNS} tours !`,
     },
   };
-  return { state: newState, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION };
+  return { state: newState, nextPhase: GamePhase.WAITING_FOR_TURN_ACTION, keepTurn: true };
 });

@@ -3,13 +3,14 @@ import { ScrollView, StyleSheet, View, Text } from 'react-native';
 import { Card, CardCategory } from '../models/Card';
 import { CardComponent } from './CardComponent';
 
-// Ordre d'affichage : Ange → Fin de tour → Ne finit pas le tour → Instantanée → Perdante
+// Ordre d'affichage : Ange → Fin de tour → Ne finit pas le tour → Instantanée → Copie → Perdante
 const CATEGORY_ORDER: Record<CardCategory, number> = {
   [CardCategory.SAVING]: 0,
   [CardCategory.TURN_ENDING]: 1,
   [CardCategory.PEEK]: 2,
   [CardCategory.INSTANT]: 3,
-  [CardCategory.LOSING]: 4,
+  [CardCategory.COPY]: 4,
+  [CardCategory.LOSING]: 5,
 };
 
 function sortHand(cards: Card[]): Card[] {

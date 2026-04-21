@@ -28,6 +28,7 @@ const CATEGORY_COLORS: Record<CardCategory, string> = {
   [CardCategory.LOSING]: '#c0392b',
   [CardCategory.SAVING]: '#27ae60',
   [CardCategory.PEEK]: '#8e44ad',
+  [CardCategory.COPY]: '#17a589',
 };
 
 const CATEGORY_LABELS: Record<CardCategory, string> = {
@@ -36,6 +37,7 @@ const CATEGORY_LABELS: Record<CardCategory, string> = {
   [CardCategory.LOSING]: 'Perdante',
   [CardCategory.SAVING]: 'Sauvetage',
   [CardCategory.PEEK]: 'Ne finit pas le tour',
+  [CardCategory.COPY]: 'Copie',
 };
 
 export function CardPreviewModal({

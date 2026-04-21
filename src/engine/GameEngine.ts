@@ -135,9 +135,8 @@ export class GameEngine {
             actions.push({ type: 'PLAY_CARD', playerId, cardInstanceId: card.id });
           }
 
-          // Miroir, Chaîne, Météorite also playable on your turn if discard pile is not empty
+          // Miroir (COPY), Chaîne, Météorite aussi jouables pendant son tour si une carte a déjà été posée
           if (
-            cat === CardCategory.INSTANT &&
             state.lastPlayedCardType !== null &&
             (card.type === CardType.MIROIR || card.type === CardType.CHAINE || card.type === CardType.METEORITE)
           ) {
@@ -152,9 +151,9 @@ export class GameEngine {
         if (!state.reactionWindow.eligiblePlayerIds.includes(playerId)) break;
         if (state.reactionWindow.passedPlayerIds.includes(playerId)) break;
 
-        // Can play instant cards (Miroir is turn-only, not usable as reaction)
+        // Can play instant cards (Miroir/COPY is turn-only, excluded via isInstant returning false)
         for (const card of player.hand) {
-          if (isInstant(card.type) && card.type !== CardType.MIROIR) {
+          if (isInstant(card.type)) {
             const isChained = state.chainedCards.some(c => c.cardType === card.type);
             if (!isChained) {
               actions.push({ type: 'REACT_WITH_CARD', playerId, cardInstanceId: card.id });
@@ -301,9 +300,8 @@ export class GameEngine {
     const card = currentPlayer.hand.find(c => c.id === cardInstanceId);
     const cardCat = card ? CARD_CATEGORIES[card.type] : null;
 
-    // Miroir/Chaîne/Météorite also valid on your turn when discard pile is not empty
-    const isInstantOnTurn = cardCat === CardCategory.INSTANT &&
-      state.lastPlayedCardType !== null &&
+    // Miroir (COPY)/Chaîne/Météorite also valid on your turn when a card was already played
+    const isInstantOnTurn = state.lastPlayedCardType !== null &&
       (card?.type === CardType.MIROIR || card?.type === CardType.CHAINE || card?.type === CardType.METEORITE);
 
     if (!card || (cardCat !== CardCategory.TURN_ENDING && cardCat !== CardCategory.PEEK && !isInstantOnTurn)) return state;
@@ -515,8 +513,8 @@ export class GameEngine {
 
     const player = state.players.find(p => p.id === playerId)!;
     const card = player.hand.find(c => c.id === cardInstanceId);
-    // Miroir est uniquement jouable pendant son propre tour, pas en réaction
-    if (!card || !isInstant(card.type) || card.type === CardType.MIROIR) return state;
+    // Miroir (COPY) n'est pas INSTANT → isInstant retourne false → naturellement exclu
+    if (!card || !isInstant(card.type)) return state;
 
     // Check if chained
     if (state.chainedCards.some(c => c.cardType === card.type)) return state;
@@ -559,6 +557,10 @@ export class GameEngine {
       }
       if (result.nextPhase === GamePhase.REACTION_WINDOW) {
         return GameEngine.openReactionWindow(result.state, effect);
+      }
+      // Si la carte a annulé un effet (keepTurn) et la pile est vide → garder le tour
+      if (result.keepTurn && result.state.effectStack.length === 0) {
+        return { ...result.state, reactionWindow: null, phase: GamePhase.WAITING_FOR_TURN_ACTION };
       }
       // Otherwise, resolve remaining effects on the stack or advance
       return GameEngine.resolveStackOrAdvance(result.state);
@@ -699,6 +701,10 @@ export class GameEngine {
       case GamePhase.PLAYER_ELIMINATED:
         return GameEngine.checkElimination(newState);
       default:
+        // Si keepTurn (annulation), ne pas avancer le tour
+        if (result.keepTurn && newState.effectStack.length === 0) {
+          return { ...newState, phase: GamePhase.WAITING_FOR_TURN_ACTION };
+        }
         return GameEngine.advanceTurn(newState);
     }
   }
